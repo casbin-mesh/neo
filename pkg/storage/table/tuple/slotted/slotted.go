@@ -61,7 +61,7 @@ var (
 func (s *slotted) Insert(data []byte) (slot uint16, err error) {
 	ds := len(data)
 	if ds > MaxInlineDataSize {
-		//TODO(insert to a overflow page)
+		//TODO: insert to a overflow page
 	}
 	if ds == 0 {
 		return 0, ErrZeroSizeData
@@ -85,16 +85,25 @@ func (s *slotted) Insert(data []byte) (slot uint16, err error) {
 	return idx, err
 }
 
+// Delete mask target slot data deleted.
+// We set the first bit of size to 1 to identify current data as unreadable.
+// In the future, when the page needs to be compacted, we can easily figure out the size of each tuple.
 func (s *slotted) Delete(slot uint16) error {
 	start := pageSize - slot*SizeOfSlot
-	s[start] = byte(Deleted >> 8)
-	s[start+1] = byte(Deleted)
+	mask := 0b1 << 7 // 10000000
+	// set first bit to 1
+	s[start] = s[start] | byte(mask)
 	return nil
+}
+
+func isDeleted(size uint16) bool {
+	mask := 0b1 << 7 // 10000000
+	return byte(size>>8)&byte(mask) == byte(mask)
 }
 
 func (s *slotted) Get(slot uint16) ([]byte, bool, error) {
 	size, offset, _ := s.getSlot(slot)
-	if size == 0 { // deleted
+	if isDeleted(size) { // deleted
 		return nil, true, nil
 	}
 	return s[offset : offset+size], false, nil

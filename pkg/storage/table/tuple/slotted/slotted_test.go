@@ -33,8 +33,8 @@ func TestSample(t *testing.T) {
 	assert.Nil(t, err)
 	get, _, err := s.Get(insert)
 	assert.Nil(t, err)
-	assert.Equal(t, insert, uint16(1))
-	assert.Equal(t, get, data)
+	assert.Equal(t, uint16(1), insert)
+	assert.Equal(t, data, get)
 
 	err = s.Delete(insert)
 	assert.Nil(t, err)
