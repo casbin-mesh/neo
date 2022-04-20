@@ -30,7 +30,7 @@ type lruReplacer struct {
 	mu        sync.RWMutex
 	cap       uint64
 	m         map[uint64]*list.Element
-	leastUsed list.List
+	leastUsed *list.List
 }
 
 func (l *lruReplacer) Pin(frameId uint64) error {
@@ -51,7 +51,7 @@ func (l *lruReplacer) Unpin(frameId uint64) error {
 	if l.exist(frameId) {
 		return nil
 	}
-	if l.leastUsed.Len() > int(l.cap) {
+	if l.leastUsed.Len() == int(l.cap) {
 		return ErrExceedMaxCap
 	}
 	l.m[frameId] = l.leastUsed.PushFront(frameId)
@@ -84,11 +84,11 @@ func (l *lruReplacer) exist(frameId uint64) bool {
 	return ok
 }
 
-func NewLRUReplacer(cap uint64) r.Replacer {
+func NewLRUReplacer(cap uint64) replacer.Replacer {
 	return &lruReplacer{
 		cap:       cap,
 		m:         make(map[uint64]*list.Element),
-		leastUsed: list.List{},
+		leastUsed: list.New(),
 		mu:        sync.RWMutex{},
 	}
 }

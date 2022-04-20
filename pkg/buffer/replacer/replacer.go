@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package r
+package replacer
 
 type Replacer interface {
 	Pin(frameId uint64) error
