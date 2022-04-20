@@ -60,9 +60,9 @@ func TestConcurrencyUnpin(t *testing.T) {
 	r := NewLRUReplacer(uint64(size))
 	wg := sync.WaitGroup{}
 	for i := 0; i < size; i++ {
+		wg.Add(1)
 		go func(num int) {
 			defer wg.Done()
-			wg.Add(1)
 			UnpinHelper(r, uint64(num), t)
 		}(i)
 	}
@@ -78,9 +78,9 @@ func TestConcurrencyPin(t *testing.T) {
 	r := NewLRUReplacer(uint64(size))
 	wg := sync.WaitGroup{}
 	for i := 0; i < size; i++ {
+		wg.Add(1)
 		go func(num int) {
 			defer wg.Done()
-			wg.Add(1)
 			PinHelper(r, uint64(num), t)
 		}(i)
 	}
@@ -104,9 +104,9 @@ func TestConcurrencyPinAndUnPin(t *testing.T) {
 
 	wg := sync.WaitGroup{}
 	for i, task := range tasks {
+		wg.Add(1)
 		go func(num int, ts Task) {
 			defer wg.Done()
-			wg.Add(1)
 			ts(r, uint64(num), t)
 		}(i, task)
 	}
@@ -125,9 +125,9 @@ func TestConcurrencyUnpinAndVictim(t *testing.T) {
 
 	wg := sync.WaitGroup{}
 	for i, task := range tasks {
+		wg.Add(1)
 		go func(num int, ts Task) {
 			defer wg.Done()
-			wg.Add(1)
 			ts(r, uint64(num), t)
 		}(i, task)
 	}
