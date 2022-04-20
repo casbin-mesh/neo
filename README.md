@@ -8,7 +8,7 @@
 Casbin NEO(neo for new engine option), A Casbin-compatible engine.
 In this project, we would go to restructure the Casbin storage layer, which will employ the column-oriented store, and supports transactions executing under snapshot isolation level.
 
-Furthermore, we were planning to explore ideas from state-of-art systems and research, such as the query on compressed data, query compilation, fast serializable snapshot isolation, etc.
+Furthermore, we were planning to explore ideas from state-of-art systems and research, such as the query on compression data, query compilation, fast serializable snapshot isolation, etc.
 
 **NOTE: This project is still under development.**
 
