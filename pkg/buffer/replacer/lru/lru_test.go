@@ -15,8 +15,9 @@
 package lru
 
 import (
-	r "github.com/casbin-mesh/neo/pkg/buffer/replacer"
+	"github.com/casbin-mesh/neo/pkg/buffer/replacer"
 	"github.com/stretchr/testify/assert"
+	"sort"
 	"sync"
 	"testing"
 )
@@ -50,7 +51,7 @@ func TestSimple(t *testing.T) {
 	assert.False(t, r.Victim(&res))
 }
 
-func UnpinHelper(r r.Replacer, frameId uint64, t assert.TestingT) {
+func UnpinHelper(r replacer.Replacer, frameId uint64, t assert.TestingT) {
 	assert.Nil(t, r.Unpin(frameId))
 }
 
@@ -59,16 +60,16 @@ func TestConcurrencyUnpin(t *testing.T) {
 	r := NewLRUReplacer(uint64(size))
 	wg := sync.WaitGroup{}
 	for i := 0; i < size; i++ {
+		wg.Add(1)
 		go func(num int) {
 			defer wg.Done()
-			wg.Add(1)
 			UnpinHelper(r, uint64(num), t)
 		}(i)
 	}
 	wg.Wait()
 }
 
-func PinHelper(r r.Replacer, frameId uint64, t assert.TestingT) {
+func PinHelper(r replacer.Replacer, frameId uint64, t assert.TestingT) {
 	assert.Nil(t, r.Pin(frameId))
 }
 
@@ -77,23 +78,23 @@ func TestConcurrencyPin(t *testing.T) {
 	r := NewLRUReplacer(uint64(size))
 	wg := sync.WaitGroup{}
 	for i := 0; i < size; i++ {
+		wg.Add(1)
 		go func(num int) {
 			defer wg.Done()
-			wg.Add(1)
 			PinHelper(r, uint64(num), t)
 		}(i)
 	}
 	wg.Wait()
 }
 
-type Task func(r r.Replacer, frameId uint64, t assert.TestingT)
+type Task func(r replacer.Replacer, frameId uint64, t assert.TestingT)
 
 func TestConcurrencyPinAndUnPin(t *testing.T) {
 	var tasks []Task
-	size := 1000
-	r := NewLRUReplacer(uint64(size))
+	size := uint64(1024)
+	r := NewLRUReplacer(size)
 	// generate test tasks
-	for i := 0; i < size; i++ {
+	for i := uint64(0); i < size; i++ {
 		if i%2 == 0 {
 			tasks = append(tasks, PinHelper)
 		} else {
@@ -103,9 +104,9 @@ func TestConcurrencyPinAndUnPin(t *testing.T) {
 
 	wg := sync.WaitGroup{}
 	for i, task := range tasks {
+		wg.Add(1)
 		go func(num int, ts Task) {
 			defer wg.Done()
-			wg.Add(1)
 			ts(r, uint64(num), t)
 		}(i, task)
 	}
@@ -113,7 +114,38 @@ func TestConcurrencyPinAndUnPin(t *testing.T) {
 	wg.Wait()
 }
 
-// TODO: Writes more complex concurrency tests
+func TestConcurrencyUnpinAndVictim(t *testing.T) {
+	var tasks []Task
+	size := uint64(1024)
+	r := NewLRUReplacer(size)
+	// generate test tasks
+	for i := uint64(0); i < size; i++ {
+		tasks = append(tasks, UnpinHelper)
+	}
+
+	wg := sync.WaitGroup{}
+	for i, task := range tasks {
+		wg.Add(1)
+		go func(num int, ts Task) {
+			defer wg.Done()
+			ts(r, uint64(num), t)
+		}(i, task)
+	}
+	wg.Wait()
+
+	var res uint64
+	var expected []uint64
+	var results []uint64
+	for i := uint64(0); i < size; i++ {
+		assert.True(t, r.Victim(&res))
+		expected = append(expected, i)
+		results = append(results, res)
+	}
+	sort.Slice(results, func(i, j int) bool {
+		return results[i] < results[j]
+	})
+	assert.Equal(t, expected, results)
+}
 
 func BenchmarkLruReplacer_Victim(b *testing.B) {
 	size := 1000000
@@ -147,4 +179,22 @@ func BenchmarkLruReplacer_Unpin(b *testing.B) {
 	}
 	b.ResetTimer()
 	r.Pin(uint64(size))
+}
+
+func TestLruReplacer_Victim(t *testing.T) {
+	size := uint64(1024)
+	r := NewLRUReplacer(size)
+	generateVictimTest(r, size, t)
+}
+
+func TestLruReplacer_Pin(t *testing.T) {
+	size := uint64(1024)
+	r := NewLRUReplacer(size)
+	generatePinTest(r, size, t)
+}
+
+func TestLruReplacer_Size(t *testing.T) {
+	size := uint64(1024)
+	r := NewLRUReplacer(size)
+	generateSizeTest(r, size, t)
 }

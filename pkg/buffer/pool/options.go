@@ -12,11 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package replacer
+package pool
 
-type Replacer interface {
-	Pin(frameId uint64) error
-	Unpin(frameId uint64) error
-	Victim(frameId *uint64) bool
-	Size() uint64
+type FetchPageOption struct {
+}
+
+type FindOneAvailablePageOption struct {
+}
+
+type NewPageOption struct {
+}
+
+func MergeNewPageOptions(opts ...*NewPageOption) *NewPageOption {
+	if len(opts) == 1 {
+		return opts[0]
+	}
+	// TODO: merge options
+	return nil
 }
