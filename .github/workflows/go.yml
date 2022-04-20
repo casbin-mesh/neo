@@ -2,7 +2,10 @@ name: Go
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
+      - 'feat/**'
+      - 'release/**'
   pull_request:
     branches: [ main ]
 
