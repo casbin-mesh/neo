@@ -89,22 +89,24 @@ func (p *pool) FetchPage(ctx Ctx, pageId uint64, opts ...*FetchPageOption) (pg p
 		if err = p.r.Pin(uint64(frameId)); err != nil {
 			return nil, err
 		}
-		return p.pages[frameId], nil
+		pg = p.pages[frameId]
+		pg.IncrPinCount()
+		return pg, nil
 	}
 
-	// pick an available frame
-	frame, err := p.findOneAvailableFrame(nil)
+	// pick an available frameId
+	evictedFrameId, err := p.findOneAvailableFrame(nil)
 	if err != nil {
 		return nil, err
 	}
 
-	pg = p.pages[frame]
-	if err = p.r.Pin(uint64(frame)); err != nil {
+	pg = p.pages[evictedFrameId]
+	if err = p.r.Pin(uint64(evictedFrameId)); err != nil {
 		return nil, err
 	}
 	p.pageTableMu.Lock()
 	defer p.pageTableMu.Unlock()
-	p.pageTable[PageID(pageId)] = frameId
+	p.pageTable[PageID(pageId)] = evictedFrameId
 	// clean up
 	pg.SetPageId(pageId)
 	pg.ResetData()
@@ -134,7 +136,7 @@ func (p *pool) UnpinPage(ctx Ctx, pageId uint64, dirty bool) (bool, error) {
 	}
 	pg.DecrPinCount()
 	if pg.PinCount() == 0 {
-		if err := p.r.Unpin(pageId); err != nil {
+		if err := p.r.Unpin(uint64(frame)); err != nil {
 			return false, err
 		}
 	}
@@ -143,6 +145,7 @@ func (p *pool) UnpinPage(ctx Ctx, pageId uint64, dirty bool) (bool, error) {
 
 var (
 	ErrNoAvailablePage = errors.New("failed to find an available page")
+	ErrPinCountZero    = errors.New("page pin count is not zero")
 )
 
 // findVictimPage returns an available Frame.
@@ -210,15 +213,16 @@ func (p *pool) NewPage(ctx Ctx, pageId *uint64, opts ...*NewPageOption) (page.Pa
 	// Allocate a new page
 	// TODO: use pre-allocation to amortize the overhead of memory allocations
 	pg = p.pages[frame]
-	*pageId = uint64(frame)
+	nextPage := uint64(p.getNextPageID())
+	*pageId = nextPage
 	pg.ResetData()
 	pg.SetIsDirty(false)
 	pg.SetPinCount(1)
-	pg.SetPageId(uint64(p.getNextPageID()))
+	pg.SetPageId(nextPage)
 
 	// Register page to pageTable
 	p.pageTableMu.Lock()
-	p.pageTable[PageID(pg.PageId())] = frame
+	p.pageTable[PageID(nextPage)] = frame
 	p.pageTableMu.Unlock()
 	return pg, nil
 }
@@ -230,13 +234,13 @@ func (p *pool) DeletePage(ctx Ctx, pageId uint64) (bool, error) {
 	pg := p.pages[frame]
 	if ok {
 		if pg.PinCount() != 0 {
-			return false, errors.New("page pin count is not zero")
+			return false, ErrPinCountZero
 		}
+		pg.ResetData()
 		// deregister page
 		delete(p.pageTable, PageID(pageId))
 		p.deletedPageIdsMu.Lock()
 		defer p.deletedPageIdsMu.Unlock()
-		//TODO(weny): reset
 		p.deletedPageIds.PushFront(pg)
 	}
 	// if page does not exist, return true
