@@ -27,6 +27,7 @@ type Page interface {
 	Latch() Locker
 	PinCount() uint64
 	DecrPinCount() uint64
+	IncrPinCount() uint64
 	SetPinCount(count uint64)
 	SetPageId(pid uint64)
 	PageId() uint64
@@ -52,6 +53,11 @@ type page struct {
 
 func (p *page) DecrPinCount() uint64 {
 	p.pinCount--
+	return p.pinCount
+}
+
+func (p *page) IncrPinCount() uint64 {
+	p.pinCount++
 	return p.pinCount
 }
 
