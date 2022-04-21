@@ -64,6 +64,7 @@ func (p *page) SetIsDirty(b bool) {
 }
 
 func memset(data *[disk.PAGE_SIZE]byte, value byte) {
+	data[0] = value
 	for i := 1; i < disk.PAGE_SIZE; i *= 2 {
 		copy(data[i:], data[:i])
 	}
