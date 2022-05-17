@@ -15,7 +15,6 @@
 package art
 
 import (
-	"bytes"
 	"unsafe"
 )
 
@@ -127,8 +126,8 @@ func (an *artNode) leaf() *artLeaf {
 }
 
 // Node helpers
-func replaceRef(oldNode *artNode, newNode *artNode) {
-	*oldNode = *newNode
+func replaceRef(oldNode **artNode, newNode *artNode) {
+	*oldNode = newNode
 }
 
 func replaceNode(oldNode *artNode, newNode *artNode) {
@@ -150,6 +149,7 @@ func (an *artNode) addChild48(char byte, child *artNode) (grew bool) {
 			index++
 		}
 		n.keys[char] = index + 1 // 0 means key is not exist
+		n.children[index] = child
 		n.numChildren++
 	} else {
 		newNode := an.grow()
@@ -247,6 +247,7 @@ func (an *artNode) grow() *artNode {
 		src := node.node4()
 		copy(dst.keys[:], src.keys[:])
 		copy(dst.children[:], src.children[:])
+		return node
 	case Node16:
 		node := newNode48()
 		cloneMeta(node, an)
@@ -254,6 +255,7 @@ func (an *artNode) grow() *artNode {
 		src := node.node16()
 		copy(dst.keys[:], src.keys[:])
 		copy(dst.children[:], src.children[:])
+		return node
 	case Node48:
 		node := newNode256()
 		cloneMeta(node, an)
@@ -264,18 +266,14 @@ func (an *artNode) grow() *artNode {
 				dst.children[i] = src.children[index-1]
 			}
 		}
+		return node
 	}
 
-	return an
+	return nil
 }
 
-func (an *artNode) leafMatch(key Key) bool {
-	if len(key) != an.partialLen {
-		return false
-	}
-	return bytes.Compare(an.partial[:an.partialLen], key[:]) == 0
-}
-
+// checkPrefix Returns the number of prefix characters shared between
+// the key and node.
 func (an *artNode) checkPrefix(key Key, depth uint32) uint32 {
 	maxCmp := min(min(MaxPrefixLen, an.partialLen), len(key)-int(depth))
 	idx := uint32(0)
@@ -370,8 +368,11 @@ func (an *artNode) index(char byte) int {
 		}
 	case Node48:
 		n48 := an.node48()
+		// for node48 keys, the 0 means not exists
+		// in addChild, we shift 1 to store the child
+		// now we need shift -1 to retrieve the child
 		if idx := n48.keys[char]; idx > 0 {
-			return int(idx)
+			return int(idx) - 1
 		}
 	case Node256:
 		return int(char)

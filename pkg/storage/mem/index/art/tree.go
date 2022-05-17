@@ -75,12 +75,12 @@ func leftmost(an *artNode) *artLeaf {
 		idx := uint8(0)
 		for ; node.children[node.keys[idx]] == nil; idx++ {
 		}
-		return leftmost(node.children[node.keys[idx]])
+		return leftmost(node.children[node.keys[idx]-1])
 
 	case Node256:
 		node := an.node256()
-		idx := 255
-		for ; node.children[idx] == nil; idx-- {
+		idx := 0
+		for ; node.children[idx] == nil; idx++ {
 		}
 		return leftmost(node.children[idx])
 
@@ -110,14 +110,15 @@ func rightmost(an *artNode) *artLeaf {
 	case Node48:
 		node := an.node48()
 		idx := uint8(255)
-		for ; node.children[node.keys[idx]] == nil; idx-- {
+		for ; node.keys[idx] == 0; idx-- { // found the right most key
 		}
-		return rightmost(node.children[node.keys[idx]])
+
+		return rightmost(node.children[node.keys[idx]-1])
 
 	case Node256:
 		node := an.node256()
-		idx := 0
-		for ; node.children[idx] == nil; idx++ {
+		idx := 255
+		for ; node.children[idx] == nil; idx-- {
 		}
 		return rightmost(node.children[idx])
 	}
@@ -126,7 +127,7 @@ func rightmost(an *artNode) *artLeaf {
 }
 
 func (art *artTree) Insert(key Key, value Value) (Value, bool) {
-	old, updated := art.recursiveInsert(art.root, key, value, 0)
+	old, updated := art.recursiveInsert(&art.root, key, value, 0)
 	if !updated {
 		art.size++
 	}
@@ -134,7 +135,7 @@ func (art *artTree) Insert(key Key, value Value) (Value, bool) {
 }
 
 func (art *artTree) Remove(key Key, value Value) (Value, bool) {
-	value, deleted := art.recursiveRemove(art.root, key, 0)
+	value, deleted := art.recursiveRemove(&art.root, key, 0)
 	if deleted {
 		art.size--
 		return value, true
@@ -162,7 +163,7 @@ func (art *artTree) Search(key Key) (Value, bool) {
 			depth += uint32(current.partialLen)
 		}
 
-		next := current.findChild(key[depth])
+		next := current.findChild(key.At(int(depth)))
 		if next != nil {
 			current = next
 		} else {
@@ -174,12 +175,12 @@ func (art *artTree) Search(key Key) (Value, bool) {
 	return nil, false
 }
 
-func (art *artTree) recursiveInsert(curNode *artNode, key Key, value Value, depth uint32) (Value, bool) {
-	current := curNode
+func (art *artTree) recursiveInsert(curNode **artNode, key Key, value Value, depth uint32) (Value, bool) {
+	current := *curNode
 	// if current is nil, insert a left node
 	if current == nil {
 		replaceRef(curNode, newLeaf(key, value))
-		return nil, false
+		return value, false
 	}
 
 	// if current is a left node, we need replace it with a node (growing)
@@ -198,8 +199,8 @@ func (art *artTree) recursiveInsert(curNode *artNode, key Key, value Value, dept
 		newNode := newNode4()
 		newNode.setPrefix(key, longestPrefix)
 		// it's safe to call add child directly
-		newNode.addChild4(key[int(depth)+longestPrefix], current)
-		newNode.addChild4(left2.key[int(depth)+longestPrefix], newLeftNode)
+		newNode.addChild4(left.key.At(int(depth)+longestPrefix), current)
+		newNode.addChild4(left2.key.At(int(depth)+longestPrefix), newLeftNode)
 		replaceRef(curNode, newNode)
 	}
 
@@ -221,62 +222,63 @@ func (art *artTree) recursiveInsert(curNode *artNode, key Key, value Value, dept
 		} else {
 			current.partialLen -= int(prefixMismatchedIdx) + 1
 			l := leftmost(current)
-			newSharedNode.addChild(l.key[depth+prefixMismatchedIdx], current)
+			newSharedNode.addChild(l.key.At(int(depth+prefixMismatchedIdx)), current)
 			copy(current.partial[:], current.partial[prefixMismatchedIdx:min(MaxPrefixLen, current.partialLen)])
 		}
-		newSharedNode.addChild(key[depth+prefixMismatchedIdx], newLeaf(key, value))
+		newSharedNode.addChild(key.At(int(depth+prefixMismatchedIdx)), newLeaf(key, value))
 
 		replaceRef(curNode, newSharedNode)
-		return nil, false
+		return value, false
 	}
 
 RecurseSearch:
 	// while prefixMismatchedIdx > node prefix len
-	found := current.findChild(key[depth])
+	found := current.findChild(key.At(int(depth)))
 	if found != nil {
-		return art.recursiveInsert(found, key, value, depth+1)
+		return art.recursiveInsert(&found, key, value, depth+1)
 	}
 	// just add a leaf node
-	current.addChild(key[depth], newLeaf(key, value))
-	return nil, false
+	current.addChild(key.At(int(depth)), newLeaf(key, value))
+	return value, false
 
 }
 
-func (art *artTree) recursiveRemove(curNode *artNode, key Key, depth uint32) (Value, bool) {
-	if curNode == nil {
+func (art *artTree) recursiveRemove(curNode **artNode, key Key, depth uint32) (Value, bool) {
+	current := *curNode
+	if current == nil {
 		return nil, false
 	}
 
 	// leaf node
-	if curNode.isLeaf() {
-		if curNode.leafMatch(key) {
+	if current.isLeaf() {
+		if current.leaf().Match(key) {
 			replaceRef(curNode, nil)
-			return curNode.leaf().value, true
+			return current.leaf().value, true
 		}
 		return nil, false
 	}
 
 	// handling inner node
-	if curNode.partialLen > 0 {
-		prefixLen := curNode.checkPrefix(key, depth)
-		if prefixLen != uint32(min(MaxPrefixLen, curNode.partialLen)) {
+	if current.partialLen > 0 {
+		prefixLen := current.checkPrefix(key, depth)
+		if prefixLen != uint32(min(MaxPrefixLen, current.partialLen)) {
 			return nil, false
 		}
-		depth += uint32(curNode.partialLen)
+		depth += uint32(current.partialLen)
 	}
 
 	// find a child node
-	child, idxOrChar := curNode.findChildAndIdx(key[depth])
+	child, idxOrChar := current.findChildAndIdx(key[depth])
 	if child == nil {
 		return nil, false
 	}
 
 	if child.isLeaf() {
-		if child.leafMatch(key) {
-			curNode.removeChildAt(byte(idxOrChar))
+		if current.leaf().Match(key) {
+			current.removeChildAt(byte(idxOrChar))
 			return child.leaf().value, true
 		}
 		return nil, false
 	}
-	return art.recursiveRemove(child, key, depth+1)
+	return art.recursiveRemove(&child, key, depth+1)
 }

@@ -25,6 +25,15 @@ func (key Key) Clone() Key {
 	return cloned
 }
 
+// At return a char at post
+func (key Key) At(pos int) byte {
+	if pos < 0 || pos >= len(key) {
+		// imitate the C-like string termination character
+		return 0
+	}
+	return key[pos]
+}
+
 // Value type.
 type Value []byte
 
