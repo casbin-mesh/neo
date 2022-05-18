@@ -65,7 +65,8 @@ func TestLeaf_PrefixMatch(t *testing.T) {
 }
 
 func TestArtNode_SetPrefix(t *testing.T) {
-	n := newNode4()
+	n4 := newNode4()
+	n := n4.node()
 	assert.NotNil(t, n)
 	key := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 	n.setPrefix(key, 2)
@@ -80,14 +81,15 @@ func TestArtNode_SetPrefix(t *testing.T) {
 
 func TestArtNode_CheckPrefix(t *testing.T) {
 	n := newNode4()
+	n4 := n.node()
 	assert.NotNil(t, n)
 	key := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
-	n.setPrefix(key, len(key))
+	n4.setPrefix(key, len(key))
 
 	assert.Equal(t, uint32(len(key)), n.checkPrefix(key, 0))
 
 	// set a shorter key
-	n.setPrefix(key, 5)
+	n4.setPrefix(key, 5)
 	assert.Equal(t, uint32(5), n.checkPrefix(key, 0))
 	assert.Equal(t, uint32(0), n.checkPrefix(key, 1))
 	assert.Equal(t, uint32(5), n.checkPrefix(append([]byte{0}, key...), 1))
@@ -97,14 +99,14 @@ func TestArtNode_CloneMeta(t *testing.T) {
 	// mock
 	src := newNode4()
 	key := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
-	src.setPrefix(key, len(key))
-	src.numChildren = 255
+	src.node().setPrefix(key, len(key))
+	src.node().numChildren = 255
 
 	dst := newNode4()
-	cloneMeta(dst, src)
+	cloneMeta(dst.node(), src.node())
 
 	assert.Equal(t, uint32(len(key)), dst.checkPrefix(key, 0))
-	assert.Equal(t, uint8(255), dst.numChildren)
+	assert.Equal(t, uint8(255), dst.node().numChildren)
 }
 
 func TestArtNode_LeafFindChile(t *testing.T) {

@@ -39,11 +39,19 @@ func (k Kind) String() string {
 // artNode included in all various size nodes
 // node sizes: 8B + 3B + 2B(MaxPrefixLen)
 type artNode struct {
-	ref         unsafe.Pointer
-	kind        Kind
+	ref  unsafe.Pointer
+	kind Kind
+}
+
+func (an *artNode) node() *node {
+	return (*node)(an.ref)
+}
+
+type node struct {
 	numChildren uint8
 	partialLen  int
 	partial     [MaxPrefixLen]byte
+	*artNode
 }
 
 func (an artNode) isLeaf() bool {
@@ -66,30 +74,31 @@ const (
 )
 
 type node4 struct {
-	artNode
+	node
 	children [node4Max]*artNode
 	keys     [node4Max]byte
 }
 
 type node16 struct {
-	artNode
+	node
 	children [node16Max]*artNode
 	keys     [node16Max]byte
 }
 
 type node48 struct {
-	artNode
+	node
 	children [node48Max]*artNode
 	keys     [node256Max]byte
 }
 
 type node256 struct {
-	artNode
+	node
 	children [node256Max]*artNode
 	keys     [node256Max]byte
 }
 
 func newNode4() *artNode {
+	// TODO: should set the *artNode in node4?
 	return &artNode{kind: Node4, ref: unsafe.Pointer(&node4{})}
 }
 
@@ -229,7 +238,7 @@ func (an *artNode) addChild(char byte, child *artNode) (grew bool) {
 	return
 }
 
-func cloneMeta(dst *artNode, src *artNode) {
+func cloneMeta(dst *node, src *node) {
 	if src == nil || dst == nil {
 		return
 	}
@@ -242,25 +251,25 @@ func (an *artNode) grow() *artNode {
 	switch an.kind {
 	case Node4:
 		node := newNode16()
-		cloneMeta(node, an)
 		dst := node.node16()
-		src := node.node4()
+		src := an.node4()
+		cloneMeta(&dst.node, &src.node)
 		copy(dst.keys[:], src.keys[:])
 		copy(dst.children[:], src.children[:])
 		return node
 	case Node16:
 		node := newNode48()
-		cloneMeta(node, an)
 		dst := node.node48()
-		src := node.node16()
+		src := an.node16()
+		cloneMeta(&dst.node, &src.node)
 		copy(dst.keys[:], src.keys[:])
 		copy(dst.children[:], src.children[:])
 		return node
 	case Node48:
 		node := newNode256()
-		cloneMeta(node, an)
 		dst := node.node256()
-		src := node.node48()
+		src := an.node48()
+		cloneMeta(&dst.node, &src.node)
 		for i := 0; i < node256Max; i++ {
 			if index := src.keys[i]; index > 0 { // index = 0 means key is not exist
 				dst.children[i] = src.children[index-1]
@@ -275,10 +284,11 @@ func (an *artNode) grow() *artNode {
 // checkPrefix Returns the number of prefix characters shared between
 // the key and node.
 func (an *artNode) checkPrefix(key Key, depth uint32) uint32 {
-	maxCmp := min(min(MaxPrefixLen, an.partialLen), len(key)-int(depth))
+	n := an.node()
+	maxCmp := min(min(MaxPrefixLen, n.partialLen), len(key)-int(depth))
 	idx := uint32(0)
 	for ; idx < uint32(maxCmp); idx++ {
-		if an.partial[idx] != key[depth+idx] {
+		if n.partial[idx] != key[depth+idx] {
 			return idx
 		}
 	}
@@ -287,15 +297,16 @@ func (an *artNode) checkPrefix(key Key, depth uint32) uint32 {
 
 // prefixMismatch return the index at which the prefix mismatched
 func (an *artNode) prefixMismatch(key Key, depth uint32) uint32 {
-	maxCmp := min(min(MaxPrefixLen, an.partialLen), len(key)-int(depth))
+	n := an.node()
+	maxCmp := min(min(MaxPrefixLen, n.partialLen), len(key)-int(depth))
 	idx := uint32(0)
 	for ; idx < uint32(maxCmp); idx++ {
-		if an.partial[idx] != key[depth+idx] {
+		if n.partial[idx] != key[depth+idx] {
 			return idx
 		}
 	}
 	// check the leftmost(minimum) node
-	if an.partialLen > MaxPrefixLen {
+	if n.partialLen > MaxPrefixLen {
 		l := leftmost(an)
 		maxCmp = min(len(l.key), len(key))
 		for ; idx < uint32(maxCmp); idx++ {
@@ -307,7 +318,8 @@ func (an *artNode) prefixMismatch(key Key, depth uint32) uint32 {
 	return idx
 }
 
-func (an *artNode) setPrefix(key Key, prefixLen int) {
+func (an *node) setPrefix(key Key, prefixLen int) {
+	//n := an.node()
 	an.partialLen = prefixLen
 	copy(an.partial[:], key[:min(prefixLen, MaxPrefixLen)])
 }
@@ -383,8 +395,8 @@ func (an *artNode) index(char byte) int {
 func (an *artNode) removeChild256(char byte) uint8 {
 	n := an.node256()
 	n.children[char] = nil
-	an.numChildren--
-	return an.numChildren
+	n.numChildren--
+	return n.numChildren
 }
 
 func (an *artNode) removeChild48(char byte) uint8 {
@@ -393,8 +405,8 @@ func (an *artNode) removeChild48(char byte) uint8 {
 	n.keys[char] = 0
 	n.children[pos-1] = nil
 
-	an.numChildren--
-	return an.numChildren
+	n.numChildren--
+	return n.numChildren
 }
 
 func (an *artNode) removeChild16At(idx int) uint8 {
@@ -402,8 +414,8 @@ func (an *artNode) removeChild16At(idx int) uint8 {
 	copy(n.keys[idx:], n.keys[idx+1:])
 	copy(n.children[idx:], n.children[idx+1:])
 
-	an.numChildren--
-	return an.numChildren
+	n.numChildren--
+	return n.numChildren
 }
 
 func (an *artNode) removeChild4At(idx int) uint8 {
@@ -411,8 +423,8 @@ func (an *artNode) removeChild4At(idx int) uint8 {
 	copy(n.keys[idx:], n.keys[idx+1:])
 	copy(n.children[idx:], n.children[idx+1:])
 
-	an.numChildren--
-	return an.numChildren
+	n.numChildren--
+	return n.numChildren
 }
 
 func (an *artNode) removeChildAt(idxOrChar byte) (shrank bool) {
@@ -448,9 +460,10 @@ func (an *artNode) shrink() *artNode {
 	switch an.kind {
 	case Node4:
 		n := an.node4()
-		child := n.children[0]
-		if child.isLeaf() {
-			return child
+		childIn := n.children[0]
+		childNode := n.children[0].node()
+		if childIn.isLeaf() {
+			return childIn
 		}
 		// concatenate the prefixes
 		prefixLen := n.partialLen
@@ -459,29 +472,29 @@ func (an *artNode) shrink() *artNode {
 			prefixLen++
 		}
 		if prefixLen < MaxPrefixLen {
-			childPrefixLen := min(child.partialLen, MaxPrefixLen-prefixLen)
+			childPrefixLen := min(childNode.partialLen, MaxPrefixLen-prefixLen)
 			// copy reset prefix
-			copy(n.partial[prefixLen:], child.partial[:childPrefixLen])
+			copy(n.partial[prefixLen:], childNode.partial[:childPrefixLen])
 			prefixLen += childPrefixLen
 		}
-		// store the prefix in child
-		copy(child.partial[:], an.partial[:min(prefixLen, MaxPrefixLen)])
-		child.partialLen += an.partialLen + 1
+		// store the prefix in childNode
+		copy(childNode.partial[:], n.partial[:min(prefixLen, MaxPrefixLen)])
+		childNode.partialLen += n.partialLen + 1
 
-		return child
+		return childIn
 	case Node16:
 		newNode := newNode4()
-		cloneMeta(newNode, an)
 		dst := newNode.node4()
 		src := an.node16()
+		cloneMeta(&dst.node, &src.node)
 		copy(dst.keys[:], src.keys[:node4Max])
 		copy(dst.children[:], src.children[:node4Max])
 		return newNode
 	case Node48:
 		newNode := newNode16()
-		cloneMeta(newNode, an)
 		src := an.node48()
 		dst := newNode.node16()
+		cloneMeta(&dst.node, &src.node)
 		child := 0
 		for i := 0; i < node256Max; i++ {
 			pos := src.keys[i]
@@ -493,9 +506,9 @@ func (an *artNode) shrink() *artNode {
 		return newNode
 	case Node256:
 		newNode := newNode48()
-		cloneMeta(newNode, an)
 		src := an.node256()
 		dst := newNode.node48()
+		cloneMeta(&dst.node, &src.node)
 		for i := 0; i < node256Max; i++ {
 			pos := src.keys[i]
 			if pos > 0 {

@@ -43,9 +43,10 @@ func min[T Ordered](a T, b T) T {
 
 // checkPrefix Returns the number of prefix characters shared between the key and node.
 func (art *artTree) checkPrefix(n *artNode, key []byte, depth int) (idx int) {
-	maxCmp := min(min(int(n.partialLen), MaxPrefixLen), len(key)-depth)
+	nodeIn := n.node()
+	maxCmp := min(min(int(nodeIn.partialLen), MaxPrefixLen), len(key)-depth)
 	for ; idx < maxCmp; idx++ {
-		if n.partial[idx] != key[depth+idx] {
+		if nodeIn.partial[idx] != key[depth+idx] {
 			return
 		}
 	}
@@ -154,13 +155,13 @@ func (art *artTree) Search(key Key) (Value, bool) {
 			}
 			return nil, false
 		}
-
-		if current.partialLen > 0 {
+		n := current.node()
+		if n.partialLen > 0 {
 			prefixLen := current.checkPrefix(key, depth)
-			if prefixLen != uint32(min(current.partialLen, MaxPrefixLen)) {
+			if prefixLen != uint32(min(n.partialLen, MaxPrefixLen)) {
 				return nil, false
 			}
-			depth += uint32(current.partialLen)
+			depth += uint32(n.partialLen)
 		}
 
 		next := current.findChild(key.At(int(depth)))
@@ -197,37 +198,40 @@ func (art *artTree) recursiveInsert(curNode **artNode, key Key, value Value, dep
 		left2 := newLeftNode.leaf()
 		longestPrefix := longestCommonPrefix(left, left2, depth)
 		newNode := newNode4()
-		newNode.setPrefix(key, longestPrefix)
+		n4 := newNode.node()
+		n4.setPrefix(key, longestPrefix)
 		// it's safe to call add child directly
 		newNode.addChild4(left.key.At(int(depth)+longestPrefix), current)
 		newNode.addChild4(left2.key.At(int(depth)+longestPrefix), newLeftNode)
 		replaceRef(curNode, newNode)
+		return value, false
 	}
 
-	if current.partialLen > 0 {
+	n := current.node()
+	if n.partialLen > 0 {
 		prefixMismatchedIdx := current.prefixMismatch(key, depth)
-		if int(prefixMismatchedIdx) > current.partialLen {
-			depth += uint32(current.partialLen)
+		if int(prefixMismatchedIdx) > n.partialLen {
+			depth += uint32(n.partialLen)
 			goto RecurseSearch
 		}
 
 		// prefix lazy extend
-		// newSharedNode for shared prefix
-		newSharedNode := newNode4()
-		newSharedNode.setPrefix(current.partial[:min(MaxPrefixLen, prefixMismatchedIdx)], int(prefixMismatchedIdx))
-		if current.partialLen <= MaxPrefixLen {
-			newSharedNode.addChild(current.partial[prefixMismatchedIdx], current)
-			current.partialLen -= int(prefixMismatchedIdx) + 1
-			copy(current.partial[:], current.partial[prefixMismatchedIdx:min(MaxPrefixLen, current.partialLen)])
+		// newSharedArtNode for shared prefix
+		newSharedArtNode := newNode4()
+		newSharedArtNode.node().setPrefix(n.partial[:min(MaxPrefixLen, prefixMismatchedIdx)], int(prefixMismatchedIdx))
+		if n.partialLen <= MaxPrefixLen {
+			newSharedArtNode.addChild(n.partial[prefixMismatchedIdx], current)
+			n.partialLen -= int(prefixMismatchedIdx) + 1
+			copy(n.partial[:], n.partial[prefixMismatchedIdx:min(MaxPrefixLen, n.partialLen)])
 		} else {
-			current.partialLen -= int(prefixMismatchedIdx) + 1
+			n.partialLen -= int(prefixMismatchedIdx) + 1
 			l := leftmost(current)
-			newSharedNode.addChild(l.key.At(int(depth+prefixMismatchedIdx)), current)
-			copy(current.partial[:], current.partial[prefixMismatchedIdx:min(MaxPrefixLen, current.partialLen)])
+			newSharedArtNode.addChild(l.key.At(int(depth+prefixMismatchedIdx)), current)
+			copy(n.partial[:], n.partial[prefixMismatchedIdx:min(MaxPrefixLen, n.partialLen)])
 		}
-		newSharedNode.addChild(key.At(int(depth+prefixMismatchedIdx)), newLeaf(key, value))
+		newSharedArtNode.addChild(key.At(int(depth+prefixMismatchedIdx)), newLeaf(key, value))
 
-		replaceRef(curNode, newSharedNode)
+		replaceRef(curNode, newSharedArtNode)
 		return value, false
 	}
 
@@ -258,13 +262,14 @@ func (art *artTree) recursiveRemove(curNode **artNode, key Key, depth uint32) (V
 		return nil, false
 	}
 
+	n := current.node()
 	// handling inner node
-	if current.partialLen > 0 {
+	if n.partialLen > 0 {
 		prefixLen := current.checkPrefix(key, depth)
-		if prefixLen != uint32(min(MaxPrefixLen, current.partialLen)) {
+		if prefixLen != uint32(min(MaxPrefixLen, n.partialLen)) {
 			return nil, false
 		}
-		depth += uint32(current.partialLen)
+		depth += uint32(n.partialLen)
 	}
 
 	// find a child node
