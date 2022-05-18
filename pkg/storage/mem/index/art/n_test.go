@@ -111,7 +111,7 @@ func TestArtNode_CloneMeta(t *testing.T) {
 
 func TestArtNode_LeafFindChile(t *testing.T) {
 	leaf := newLeaf(Key("I'm Key"), Value("I'm Value"))
-	assert.Nil(t, leaf.findChild('I'))
+	assert.Nil(t, *leaf.findChild('I'))
 }
 
 type NodeTests struct {
@@ -137,7 +137,7 @@ func TestArtTree_NodeAddChild(t *testing.T) {
 		for i := 0; i < test.maxChildren; i++ {
 			leaf := test.target.findChild(byte(i))
 			assert.NotNilf(t, leaf, "should get a leaf %d in test %s", i, test.name)
-			assert.Equalf(t, Value([]byte{byte(i)}), leaf.leaf().value, "should get a value equals %d in test %s", i, test.name)
+			assert.Equalf(t, Value([]byte{byte(i)}), (*leaf).leaf().value, "should get a value equals %d in test %s", i, test.name)
 		}
 	}
 }
@@ -162,7 +162,7 @@ func TestArtTree_NodeAddChildReverse(t *testing.T) {
 		for i := 0; i < test.maxChildren; i++ {
 			leaf := test.target.findChild(byte(i))
 			assert.NotNilf(t, leaf, "should get a leaf %d in test %s", i, test.name)
-			assert.Equalf(t, Value([]byte{byte(i)}), leaf.leaf().value, "should get a value equals %d in test %s", i, test.name)
+			assert.Equalf(t, Value([]byte{byte(i)}), (*leaf).leaf().value, "should get a value equals %d in test %s", i, test.name)
 		}
 	}
 }

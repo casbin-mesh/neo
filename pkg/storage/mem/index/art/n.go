@@ -94,7 +94,6 @@ type node48 struct {
 type node256 struct {
 	node
 	children [node256Max]*artNode
-	keys     [node256Max]byte
 }
 
 func newNode4() *artNode {
@@ -262,8 +261,10 @@ func (an *artNode) grow() *artNode {
 		dst := node.node48()
 		src := an.node16()
 		cloneMeta(&dst.node, &src.node)
-		copy(dst.keys[:], src.keys[:])
-		copy(dst.children[:], src.children[:])
+		for i, key := range src.keys {
+			dst.keys[key] = byte(i + 1)
+			dst.children[i] = src.children[i]
+		}
 		return node
 	case Node48:
 		node := newNode256()
@@ -308,7 +309,7 @@ func (an *artNode) prefixMismatch(key Key, depth uint32) uint32 {
 	// check the leftmost(minimum) node
 	if n.partialLen > MaxPrefixLen {
 		l := leftmost(an)
-		maxCmp = min(len(l.key), len(key))
+		maxCmp = min(len(l.key), len(key)) - int(depth)
 		for ; idx < uint32(maxCmp); idx++ {
 			if l.key[idx+depth] != key[depth+idx] {
 				return idx
@@ -343,23 +344,25 @@ func (an *artNode) findChildAndIdx(key byte) (*artNode, int) {
 	return nil, -1
 }
 
-func (an *artNode) findChild(key byte) *artNode {
+var nodeNotFound *artNode
+
+func (an *artNode) findChild(key byte) **artNode {
 	idx := an.index(key)
 	if idx != -1 {
 		switch an.kind {
 		case Node4:
-			return an.node4().children[idx]
+			return &an.node4().children[idx]
 
 		case Node16:
-			return an.node16().children[idx]
+			return &an.node16().children[idx]
 
 		case Node48:
-			return an.node48().children[idx]
+			return &an.node48().children[idx]
 		case Node256:
-			return an.node256().children[idx]
+			return &an.node256().children[idx]
 		}
 	}
-	return nil
+	return &nodeNotFound
 }
 
 func (an *artNode) index(char byte) int {
@@ -380,9 +383,8 @@ func (an *artNode) index(char byte) int {
 		}
 	case Node48:
 		n48 := an.node48()
-		// for node48 keys, the 0 means not exists
-		// in addChild, we shift 1 to store the child
-		// now we need shift -1 to retrieve the child
+		// for node48 keys, the Idx 0 means not exists.
+		// we add 1 to the Idx to store it, the now we need minus 1 to retrieve the child
 		if idx := n48.keys[char]; idx > 0 {
 			return int(idx) - 1
 		}
@@ -501,6 +503,7 @@ func (an *artNode) shrink() *artNode {
 			if pos > 0 {
 				dst.keys[child] = byte(i)
 				dst.children[child] = src.children[pos-1]
+				child++
 			}
 		}
 		return newNode
@@ -509,11 +512,12 @@ func (an *artNode) shrink() *artNode {
 		src := an.node256()
 		dst := newNode.node48()
 		cloneMeta(&dst.node, &src.node)
-		for i := 0; i < node256Max; i++ {
-			pos := src.keys[i]
-			if pos > 0 {
-				dst.children[pos] = src.children[i]
-				dst.keys[i] = pos + 1
+		nchild := 0
+		for i, child := range src.children {
+			if child != nil {
+				dst.children[nchild] = src.children[i]
+				dst.keys[i] = byte(nchild + 1)
+				nchild++
 			}
 		}
 		return newNode

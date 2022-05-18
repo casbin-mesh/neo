@@ -41,18 +41,6 @@ func min[T Ordered](a T, b T) T {
 	return b
 }
 
-// checkPrefix Returns the number of prefix characters shared between the key and node.
-func (art *artTree) checkPrefix(n *artNode, key []byte, depth int) (idx int) {
-	nodeIn := n.node()
-	maxCmp := min(min(int(nodeIn.partialLen), MaxPrefixLen), len(key)-depth)
-	for ; idx < maxCmp; idx++ {
-		if nodeIn.partial[idx] != key[depth+idx] {
-			return
-		}
-	}
-	return
-}
-
 // Find the leftmost(by default, minimum) leaf under a artNode
 func leftmost(an *artNode) *artLeaf {
 	switch an.kind {
@@ -135,7 +123,7 @@ func (art *artTree) Insert(key Key, value Value) (Value, bool) {
 	return old, updated
 }
 
-func (art *artTree) Remove(key Key, value Value) (Value, bool) {
+func (art *artTree) Remove(key Key) (Value, bool) {
 	value, deleted := art.recursiveRemove(&art.root, key, 0)
 	if deleted {
 		art.size--
@@ -165,8 +153,8 @@ func (art *artTree) Search(key Key) (Value, bool) {
 		}
 
 		next := current.findChild(key.At(int(depth)))
-		if next != nil {
-			current = next
+		if *next != nil {
+			current = *next
 		} else {
 			current = nil
 		}
@@ -199,7 +187,9 @@ func (art *artTree) recursiveInsert(curNode **artNode, key Key, value Value, dep
 		longestPrefix := longestCommonPrefix(left, left2, depth)
 		newNode := newNode4()
 		n4 := newNode.node()
-		n4.setPrefix(key, longestPrefix)
+		if longestPrefix > 0 {
+			n4.setPrefix(key[depth:], longestPrefix)
+		}
 		// it's safe to call add child directly
 		newNode.addChild4(left.key.At(int(depth)+longestPrefix), current)
 		newNode.addChild4(left2.key.At(int(depth)+longestPrefix), newLeftNode)
@@ -210,7 +200,7 @@ func (art *artTree) recursiveInsert(curNode **artNode, key Key, value Value, dep
 	n := current.node()
 	if n.partialLen > 0 {
 		prefixMismatchedIdx := current.prefixMismatch(key, depth)
-		if int(prefixMismatchedIdx) > n.partialLen {
+		if int(prefixMismatchedIdx) >= n.partialLen {
 			depth += uint32(n.partialLen)
 			goto RecurseSearch
 		}
@@ -221,13 +211,23 @@ func (art *artTree) recursiveInsert(curNode **artNode, key Key, value Value, dep
 		newSharedArtNode.node().setPrefix(n.partial[:min(MaxPrefixLen, prefixMismatchedIdx)], int(prefixMismatchedIdx))
 		if n.partialLen <= MaxPrefixLen {
 			newSharedArtNode.addChild(n.partial[prefixMismatchedIdx], current)
-			n.partialLen -= int(prefixMismatchedIdx) + 1
-			copy(n.partial[:], n.partial[prefixMismatchedIdx:min(MaxPrefixLen, n.partialLen)])
+			n.partialLen -= int(prefixMismatchedIdx + 1)
+			if n.partialLen > 0 {
+				copy(
+					n.partial[:],
+					n.partial[prefixMismatchedIdx+1:(int(prefixMismatchedIdx+1)+min(MaxPrefixLen, n.partialLen))])
+			}
 		} else {
-			n.partialLen -= int(prefixMismatchedIdx) + 1
+			n.partialLen -= int(prefixMismatchedIdx + 1)
 			l := leftmost(current)
 			newSharedArtNode.addChild(l.key.At(int(depth+prefixMismatchedIdx)), current)
-			copy(n.partial[:], n.partial[prefixMismatchedIdx:min(MaxPrefixLen, n.partialLen)])
+			if n.partialLen > 0 {
+				copy(
+					n.partial[:],
+					l.key[depth+prefixMismatchedIdx:int(depth+prefixMismatchedIdx)+min(MaxPrefixLen, n.partialLen)],
+				)
+			}
+
 		}
 		newSharedArtNode.addChild(key.At(int(depth+prefixMismatchedIdx)), newLeaf(key, value))
 
@@ -238,8 +238,8 @@ func (art *artTree) recursiveInsert(curNode **artNode, key Key, value Value, dep
 RecurseSearch:
 	// while prefixMismatchedIdx > node prefix len
 	found := current.findChild(key.At(int(depth)))
-	if found != nil {
-		return art.recursiveInsert(&found, key, value, depth+1)
+	if *found != nil {
+		return art.recursiveInsert(found, key, value, depth+1)
 	}
 	// just add a leaf node
 	current.addChild(key.At(int(depth)), newLeaf(key, value))
@@ -273,13 +273,13 @@ func (art *artTree) recursiveRemove(curNode **artNode, key Key, depth uint32) (V
 	}
 
 	// find a child node
-	child, idxOrChar := current.findChildAndIdx(key[depth])
+	child, idxOrChar := current.findChildAndIdx(key.At(int(depth)))
 	if child == nil {
 		return nil, false
 	}
 
 	if child.isLeaf() {
-		if current.leaf().Match(key) {
+		if child.leaf().Match(key) {
 			current.removeChildAt(byte(idxOrChar))
 			return child.leaf().value, true
 		}
