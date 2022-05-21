@@ -224,7 +224,7 @@ func (art *artTree) recursiveInsert(curNode **artNode, key Key, value Value, dep
 			if n.partialLen > 0 {
 				copy(
 					n.partial[:],
-					l.key[depth+prefixMismatchedIdx:int(depth+prefixMismatchedIdx)+min(MaxPrefixLen, n.partialLen)],
+					l.key[depth+prefixMismatchedIdx+1:int(depth+prefixMismatchedIdx+1)+min(MaxPrefixLen, n.partialLen)],
 				)
 			}
 
