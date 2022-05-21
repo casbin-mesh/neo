@@ -15,8 +15,14 @@
 package art
 
 import (
+	"bufio"
+	"bytes"
 	"encoding/binary"
+	gBtree "github.com/google/btree"
 	"github.com/stretchr/testify/assert"
+	"github.com/tidwall/btree"
+
+	"os"
 	"testing"
 )
 
@@ -468,6 +474,133 @@ func TestArtTree_InsertLargeKeyAndDelete(t *testing.T) {
 	}
 }
 
-//func TestArtTreeLargeExtend(t *testing.T) {
-//	tree := NewArtTree()
-//}
+// Benchmark
+func loadTestFile(path string) [][]byte {
+	file, err := os.Open(path)
+	if err != nil {
+		panic("Couldn't open " + path)
+	}
+	defer file.Close()
+
+	var words [][]byte
+	reader := bufio.NewReader(file)
+	for {
+		if line, err := reader.ReadBytes(byte('\n')); err != nil {
+			break
+		} else {
+			if len(line) > 0 {
+				words = append(words, line[:len(line)-1])
+			}
+		}
+	}
+	return words
+}
+
+type KV struct {
+	Key   []byte
+	Value []byte
+}
+
+func (kv KV) Less(than gBtree.Item) bool {
+	return bytes.Compare(kv.Key, than.(KV).Key) < 0
+}
+
+func Compare(a, b KV) bool {
+	return bytes.Compare(a.Key, b.Key) < 0
+}
+
+func BenchmarkWordsBTreeInsert(b *testing.B) {
+	words := loadTestFile("../../../../../test/assets/words.txt")
+	var kv []KV
+	for _, word := range words {
+		kv = append(kv, KV{Key: word, Value: word})
+	}
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		tree := btree.NewGeneric[KV](Compare)
+		for _, pair := range kv {
+			tree.Set(pair)
+		}
+	}
+}
+
+func BenchmarkWordsArtInsert(b *testing.B) {
+	words := loadTestFile("../../../../../test/assets/words.txt")
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		tree := NewArtTree()
+		for _, w := range words {
+			tree.Insert(w, w)
+		}
+	}
+}
+
+func BenchmarkWordsMapInsert(b *testing.B) {
+	words := loadTestFile("../../../../../test/assets/words.txt")
+	var strWords []string
+	for _, word := range words {
+		strWords = append(strWords, string(word))
+	}
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		m := make(map[string]string)
+		for _, w := range strWords {
+			m[w] = w
+		}
+	}
+}
+
+func BenchmarkWordsBTreeSearch(b *testing.B) {
+	words := loadTestFile("../../../../../test/assets/words.txt")
+	var kv []KV
+	for _, word := range words {
+		kv = append(kv, KV{Key: word, Value: word})
+	}
+	tree := btree.NewGeneric[KV](Compare)
+
+	for n := 0; n < b.N; n++ {
+		for _, pair := range kv {
+			tree.Set(pair)
+		}
+	}
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		for _, pair := range kv {
+			tree.Get(pair)
+		}
+	}
+}
+
+func BenchmarkWordsArtSearch(b *testing.B) {
+	words := loadTestFile("../../../../../test/assets/words.txt")
+	tree := NewArtTree()
+	for _, w := range words {
+		tree.Insert(w, w)
+	}
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		for _, w := range words {
+			tree.Search(w)
+		}
+	}
+}
+
+func BenchmarkWordsMapSearch(b *testing.B) {
+	words := loadTestFile("../../../../../test/assets/words.txt")
+	var strWords []string
+	for _, word := range words {
+		strWords = append(strWords, string(word))
+	}
+	m := make(map[string]string)
+	for n := 0; n < b.N; n++ {
+		for _, w := range strWords {
+			m[w] = w
+		}
+	}
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		for _, w := range strWords {
+			_ = m[w]
+		}
+	}
+}
