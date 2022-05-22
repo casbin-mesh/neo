@@ -14,19 +14,19 @@
 
 package art
 
-type artTree struct {
-	root *artNode
+type Tree struct {
+	root *Node
 	size int
 }
 
-func NewArtTree() *artTree {
-	return &artTree{
+func NewArtTree() *Tree {
+	return &Tree{
 		root: nil,
 		size: 0,
 	}
 }
 
-func (art artTree) Size() int {
+func (art Tree) Size() int {
 	return art.size
 }
 
@@ -41,11 +41,11 @@ func min[T Ordered](a T, b T) T {
 	return b
 }
 
-// Find the leftmost(by default, minimum) leaf under a artNode
-func leftmost(an *artNode) *artLeaf {
+// Find the leftmost(by default, minimum) Leaf under a ArtNode
+func leftmost(an *Node) *artLeaf {
 	switch an.kind {
 	case Leaf:
-		return an.leaf()
+		return an.Leaf()
 
 	case Node4:
 		node := an.node4()
@@ -78,11 +78,11 @@ func leftmost(an *artNode) *artLeaf {
 	return nil // that should never happen in normal case
 }
 
-// Find the rightmost(by default, maximum) leaf under a artNode
-func rightmost(an *artNode) *artLeaf {
+// Find the rightmost(by default, maximum) Leaf under a ArtNode
+func rightmost(an *Node) *artLeaf {
 	switch an.kind {
 	case Leaf:
-		return an.leaf()
+		return an.Leaf()
 
 	case Node4:
 		node := an.node4()
@@ -115,7 +115,7 @@ func rightmost(an *artNode) *artLeaf {
 	return nil // that should never happen in normal case
 }
 
-func (art *artTree) Insert(key Key, value Value) (Value, bool) {
+func (art *Tree) Insert(key Key, value Value) (Value, bool) {
 	old, updated := art.recursiveInsert(&art.root, key, value, 0)
 	if !updated {
 		art.size++
@@ -123,7 +123,7 @@ func (art *artTree) Insert(key Key, value Value) (Value, bool) {
 	return old, updated
 }
 
-func (art *artTree) Remove(key Key) (Value, bool) {
+func (art *Tree) Remove(key Key) (Value, bool) {
 	value, deleted := art.recursiveRemove(&art.root, key, 0)
 	if deleted {
 		art.size--
@@ -132,12 +132,12 @@ func (art *artTree) Remove(key Key) (Value, bool) {
 	return nil, false
 }
 
-func (art *artTree) Search(key Key) (Value, bool) {
+func (art *Tree) Search(key Key) (Value, bool) {
 	current := art.root
 	depth := uint32(0)
 	for current != nil {
-		if current.isLeaf() {
-			l := current.leaf()
+		if current.IsLeaf() {
+			l := current.Leaf()
 			if l.Match(key) {
 				return l.value, true
 			}
@@ -164,7 +164,7 @@ func (art *artTree) Search(key Key) (Value, bool) {
 	return nil, false
 }
 
-func (art *artTree) recursiveInsert(curNode **artNode, key Key, value Value, depth uint32) (Value, bool) {
+func (art *Tree) recursiveInsert(curNode **Node, key Key, value Value, depth uint32) (Value, bool) {
 	current := *curNode
 	// if current is nil, insert a left node
 	if current == nil {
@@ -173,7 +173,7 @@ func (art *artTree) recursiveInsert(curNode **artNode, key Key, value Value, dep
 	}
 
 	// if current is a left node, we need replace it with a node (growing)
-	if current.isLeaf() {
+	if current.IsLeaf() {
 		left := current.castLeft()
 		// update an existing value
 		if left.Match(key) {
@@ -181,9 +181,9 @@ func (art *artTree) recursiveInsert(curNode **artNode, key Key, value Value, dep
 			left.value = value
 			return oldValue, true
 		}
-		// new leaf
+		// new Leaf
 		newLeftNode := newLeaf(key, value)
-		left2 := newLeftNode.leaf()
+		left2 := newLeftNode.Leaf()
 		longestPrefix := longestCommonPrefix(left, left2, depth)
 		newNode := newNode4()
 		n4 := newNode.node()
@@ -241,23 +241,23 @@ RecursiveSearch:
 	if *found != nil {
 		return art.recursiveInsert(found, key, value, depth+1)
 	}
-	// just add a leaf node
+	// just add a Leaf node
 	current.addChild(key.At(int(depth)), newLeaf(key, value))
 	return value, false
 
 }
 
-func (art *artTree) recursiveRemove(curNode **artNode, key Key, depth uint32) (Value, bool) {
+func (art *Tree) recursiveRemove(curNode **Node, key Key, depth uint32) (Value, bool) {
 	current := *curNode
 	if current == nil {
 		return nil, false
 	}
 
-	// leaf node
-	if current.isLeaf() {
-		if current.leaf().Match(key) {
+	// Leaf node
+	if current.IsLeaf() {
+		if current.Leaf().Match(key) {
 			replaceRef(curNode, nil)
-			return current.leaf().value, true
+			return current.Leaf().value, true
 		}
 		return nil, false
 	}
@@ -278,10 +278,10 @@ func (art *artTree) recursiveRemove(curNode **artNode, key Key, depth uint32) (V
 		return nil, false
 	}
 
-	if child.isLeaf() {
-		if child.leaf().Match(key) {
+	if child.IsLeaf() {
+		if child.Leaf().Match(key) {
 			current.removeChildAt(byte(idxOrChar))
-			return child.leaf().value, true
+			return child.Leaf().value, true
 		}
 		return nil, false
 	}

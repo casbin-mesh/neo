@@ -24,11 +24,19 @@ type artLeaf struct {
 	key   Key
 }
 
-func newLeaf(key Key, value Value) *artNode {
-	return &artNode{
+func newLeaf(key Key, value Value) *Node {
+	return &Node{
 		kind: Leaf,
 		ref:  unsafe.Pointer(&artLeaf{key: key.Clone(), value: value}),
 	}
+}
+
+func (l *artLeaf) Value() Value {
+	return l.value
+}
+
+func (l *artLeaf) Key() Key {
+	return l.key
 }
 
 func (l *artLeaf) Match(key Key) bool {

@@ -17,12 +17,12 @@ package art
 import "errors"
 
 type path struct {
-	node    *artNode
+	node    *Node
 	nextIdx int
 }
 
 type iterator struct {
-	nextNode *artNode
+	nextNode *Node
 	path     []*path
 	depth    int
 	options  int
@@ -33,7 +33,7 @@ type NewIteratorConfig struct {
 	options int
 }
 
-func (art *artTree) NewIterator(cfg NewIteratorConfig) *iterator {
+func (art *Tree) NewIterator(cfg NewIteratorConfig) *iterator {
 	target := art.seekPrefix(cfg.prefix)
 	options := traverseOptions(cfg.options)
 	path := []*path{{node: target, nextIdx: 0}}
@@ -45,7 +45,7 @@ func (art *artTree) NewIterator(cfg NewIteratorConfig) *iterator {
 	}
 }
 
-func (art *artTree) Iterator(opts ...int) *iterator {
+func (art *Tree) Iterator(opts ...int) *iterator {
 	options := traverseOptions(opts...)
 	path := []*path{{node: art.root, nextIdx: 0}}
 	return &iterator{
@@ -56,7 +56,7 @@ func (art *artTree) Iterator(opts ...int) *iterator {
 	}
 }
 
-func nextChild(childIdx int, children []*artNode) (nextChildIdx int, nextNode *artNode) {
+func nextChild(childIdx int, children []*Node) (nextChildIdx int, nextNode *Node) {
 	for i := childIdx; i < len(children); i++ {
 		child := children[i]
 		if child != nil {
@@ -68,7 +68,7 @@ func nextChild(childIdx int, children []*artNode) (nextChildIdx int, nextNode *a
 
 func (i *iterator) next() {
 	for {
-		var nextNode *artNode
+		var nextNode *Node
 		curNode := i.path[i.depth].node
 		nextChildIdx := i.path[i.depth].nextIdx
 
@@ -116,7 +116,7 @@ var (
 	ErrNoMoreNodes = errors.New("There are no more nodes in the tree")
 )
 
-func (i *iterator) Next() (*artNode, error) {
+func (i *iterator) Next() (*Node, error) {
 	for i.HasNext() {
 		if i.options&TraverseLeaf == TraverseLeaf && i.nextNode.kind == Leaf {
 			cur := i.nextNode

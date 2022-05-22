@@ -15,17 +15,17 @@
 package art
 
 const (
-	// TraverseLeaf Iterate only over leaf nodes.
+	// TraverseLeaf Iterate only over Leaf nodes.
 	TraverseLeaf = 1
 
-	// TraverseNode Iterate only over non-leaf nodes.
+	// TraverseNode Iterate only over non-Leaf nodes.
 	TraverseNode = 2
 
 	// TraverseAll Iterate over all nodes in the tree.
 	TraverseAll = TraverseLeaf | TraverseNode
 )
 
-type Callback func(node *artNode) bool
+type Callback func(node *Node) bool
 
 func traverseOptions(opts ...int) int {
 	options := 0
@@ -46,7 +46,7 @@ func traverseFilter(options int, callback Callback) Callback {
 		return callback
 	}
 
-	return func(node *artNode) bool {
+	return func(node *Node) bool {
 		if options&TraverseLeaf == TraverseLeaf && node.kind == Leaf {
 			return callback(node)
 		} else if options&TraverseNode == TraverseNode && node.kind != Leaf {
@@ -56,12 +56,12 @@ func traverseFilter(options int, callback Callback) Callback {
 	}
 }
 
-func (art *artTree) Traversal(callback Callback, opts ...int) {
+func (art *Tree) Traversal(callback Callback, opts ...int) {
 	options := traverseOptions(opts...)
 	art.recursiveTraverse(art.root, traverseFilter(options, callback))
 }
 
-func (art *artTree) recursiveTraverse(cur *artNode, callback Callback) {
+func (art *Tree) recursiveTraverse(cur *Node, callback Callback) {
 	if cur == nil {
 		return
 	}
@@ -80,7 +80,7 @@ func (art *artTree) recursiveTraverse(cur *artNode, callback Callback) {
 	}
 }
 
-func (art *artTree) childrenTraverse(callback Callback, children ...*artNode) {
+func (art *Tree) childrenTraverse(callback Callback, children ...*Node) {
 	for _, child := range children {
 		if child != nil {
 			art.recursiveTraverse(child, callback)
@@ -88,15 +88,15 @@ func (art *artTree) childrenTraverse(callback Callback, children ...*artNode) {
 	}
 }
 
-func (art *artTree) seekPrefix(partial Key) *artNode {
+func (art *Tree) seekPrefix(partial Key) *Node {
 	cur := art.root
 	if partial == nil {
 		return art.root
 	}
 	depth := uint32(0)
 	for cur != nil {
-		if cur.isLeaf() {
-			if cur.leaf().PartialMatch(partial, depth) || int(depth) == len(partial) {
+		if cur.IsLeaf() {
+			if cur.Leaf().PartialMatch(partial, depth) || int(depth) == len(partial) {
 				return cur
 			}
 			// partial match failed
@@ -129,7 +129,7 @@ func (art *artTree) seekPrefix(partial Key) *artNode {
 	return nil
 }
 
-func (art *artTree) Seek(partial Key, userCallback Callback, opts ...int) {
+func (art *Tree) Seek(partial Key, userCallback Callback, opts ...int) {
 	options := traverseOptions(opts...)
 	callback := traverseFilter(options, userCallback)
 	target := art.seekPrefix(partial)

@@ -50,8 +50,8 @@ func TestNewNode(t *testing.T) {
 func TestLeaf_Basic(t *testing.T) {
 	l := newLeaf(Key("test"), Value("value1"))
 
-	assert.False(t, l.leaf().Match(Key("should be mismatched")))
-	// we cannot shrink/grow leaf node
+	assert.False(t, l.Leaf().Match(Key("should be mismatched")))
+	// we cannot shrink/grow Leaf node
 	assert.Nil(t, l.shrink())
 	assert.Nil(t, l.grow())
 }
@@ -59,9 +59,9 @@ func TestLeaf_Basic(t *testing.T) {
 func TestLeaf_PrefixMatch(t *testing.T) {
 	l := newLeaf(Key("test"), Value("value1"))
 
-	assert.False(t, l.leaf().Match(Key("should be mismatched")))
-	assert.False(t, l.leaf().Match(nil))
-	assert.True(t, l.leaf().Match(Key("test")))
+	assert.False(t, l.Leaf().Match(Key("should be mismatched")))
+	assert.False(t, l.Leaf().Match(nil))
+	assert.True(t, l.Leaf().Match(Key("test")))
 }
 
 func TestArtNode_SetPrefix(t *testing.T) {
@@ -116,7 +116,7 @@ func TestArtNode_LeafFindChile(t *testing.T) {
 
 type NodeTests struct {
 	name        string
-	target      *artNode
+	target      *Node
 	maxChildren int
 }
 
@@ -136,8 +136,8 @@ func TestArtTree_NodeAddChild(t *testing.T) {
 		// check inserted items
 		for i := 0; i < test.maxChildren; i++ {
 			leaf := test.target.findChild(byte(i))
-			assert.NotNilf(t, leaf, "should get a leaf %d in test %s", i, test.name)
-			assert.Equalf(t, Value([]byte{byte(i)}), (*leaf).leaf().value, "should get a value equals %d in test %s", i, test.name)
+			assert.NotNilf(t, leaf, "should get a Leaf %d in test %s", i, test.name)
+			assert.Equalf(t, Value([]byte{byte(i)}), (*leaf).Leaf().value, "should get a value equals %d in test %s", i, test.name)
 		}
 	}
 }
@@ -161,15 +161,15 @@ func TestArtTree_NodeAddChildReverse(t *testing.T) {
 		// check inserted items
 		for i := 0; i < test.maxChildren; i++ {
 			leaf := test.target.findChild(byte(i))
-			assert.NotNilf(t, leaf, "should get a leaf %d in test %s", i, test.name)
-			assert.Equalf(t, Value([]byte{byte(i)}), (*leaf).leaf().value, "should get a value equals %d in test %s", i, test.name)
+			assert.NotNilf(t, leaf, "should get a Leaf %d in test %s", i, test.name)
+			assert.Equalf(t, Value([]byte{byte(i)}), (*leaf).Leaf().value, "should get a value equals %d in test %s", i, test.name)
 		}
 	}
 }
 
 func TestArtLeaf_LeafAddChild(t *testing.T) {
 	leaf := newLeaf(Key("I'm Key"), Value("I'm Value"))
-	assert.Falsef(t, leaf.addChild(byte('b'), nil), "should cannot add child on leaf nodes")
+	assert.Falsef(t, leaf.addChild(byte('b'), nil), "should cannot add child on Leaf nodes")
 }
 
 func TestArtTree_NodeIndex(t *testing.T) {
@@ -221,7 +221,7 @@ func TestArtTree_NodeMinimumMaximum(t *testing.T) {
 }
 
 func TestArtTree_NodeGrow(t *testing.T) {
-	nodes := []*artNode{newNode4(), newNode16(), newNode48()}
+	nodes := []*Node{newNode4(), newNode16(), newNode48()}
 	expected := []Kind{Node16, Node48, Node256}
 
 	for i, node := range nodes {
@@ -231,7 +231,7 @@ func TestArtTree_NodeGrow(t *testing.T) {
 }
 
 func TestArtTree_NodeShrink(t *testing.T) {
-	nodes := []*artNode{newNode4(), newNode16(), newNode48(), newNode256()}
+	nodes := []*Node{newNode4(), newNode16(), newNode48(), newNode256()}
 	expected := []Kind{Leaf, Node4, Node16, Node48}
 
 	for i, node := range nodes {

@@ -76,7 +76,7 @@ var Data = Sets{
 	{Key("register::10::info::address::code"), Value("22323234")},
 }
 
-func Seed(tree *artTree) {
+func Seed(tree *Tree) {
 	for _, datum := range Data {
 		tree.Insert(datum.key, datum.value)
 	}
@@ -135,9 +135,9 @@ func TestArtTree_Traversal(t *testing.T) {
 }
 
 func AppendToSet(sets *Sets) Callback {
-	return func(node *artNode) bool {
-		if node.isLeaf() {
-			leaf := node.leaf()
+	return func(node *Node) bool {
+		if node.IsLeaf() {
+			leaf := node.Leaf()
 			*sets = append(*sets, Set{
 				key:   leaf.key.Clone(),
 				value: leaf.value.Clone(),
@@ -147,12 +147,12 @@ func AppendToSet(sets *Sets) Callback {
 	}
 }
 
-func (sets *Sets) Append(node *artNode) {
+func (sets *Sets) Append(node *Node) {
 	if node == nil {
 		return
 	}
-	if node.isLeaf() {
-		leaf := node.leaf()
+	if node.IsLeaf() {
+		leaf := node.Leaf()
 		*sets = append(*sets, Set{
 			key:   leaf.key.Clone(),
 			value: leaf.value.Clone(),
@@ -160,12 +160,12 @@ func (sets *Sets) Append(node *artNode) {
 	}
 }
 
-func LeafPrint(node *artNode) bool {
+func LeafPrint(node *Node) bool {
 	if node == nil {
 		return false
 	}
-	if node.isLeaf() {
-		leaf := node.leaf()
+	if node.IsLeaf() {
+		leaf := node.Leaf()
 		fmt.Printf("%s ---> %s\n", leaf.key, leaf.value)
 	} else {
 		//n := node.node()

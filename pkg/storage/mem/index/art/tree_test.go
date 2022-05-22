@@ -18,6 +18,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	gBtree "github.com/google/btree"
 	"github.com/stretchr/testify/assert"
 	"github.com/tidwall/btree"
@@ -444,12 +445,12 @@ func TestArtTest_InsertAndDelete(t *testing.T) {
 	tree := NewArtTree()
 	g := NewKeyValueGenerator()
 	// insert 1000
-	for i := 0; i < 10000; i++ {
+	for i := 0; i < 1_000_000; i++ {
 		_, _ = tree.Insert(g.next())
 	}
 	g.resetCur()
 	// check inserted kv
-	for i := 0; i < 10000; i++ {
+	for i := 0; i < 1_000_000; i++ {
 		k, v := g.next()
 		got, found := tree.Search(k)
 		assert.Equalf(t, v, got, "should insert key-value (%v:%v) but got %v", k, v, got)
@@ -602,5 +603,40 @@ func BenchmarkWordsMapSearch(b *testing.B) {
 		for _, w := range strWords {
 			_ = m[w]
 		}
+	}
+}
+
+func BenchmarkWordsBTreeSeek(b *testing.B) {
+	words := loadTestFile("../../../../../test/assets/words.txt")
+	var kv []KV
+	for _, word := range words {
+		kv = append(kv, KV{Key: word, Value: word})
+	}
+	tree := btree.NewGeneric[KV](Compare)
+
+	for n := 0; n < b.N; n++ {
+		for _, pair := range kv {
+			tree.Set(pair)
+		}
+	}
+	target := kv[len(kv)/2]
+	fmt.Printf("%s\n", target.Key)
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		tree.Get(target)
+	}
+}
+
+func BenchmarkWordsArtSeek(b *testing.B) {
+	words := loadTestFile("../../../../../test/assets/words.txt")
+	tree := NewArtTree()
+	for _, w := range words {
+		tree.Insert(w, w)
+	}
+	word := words[len(words)/2]
+	fmt.Printf("%s\n", word)
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		tree.seekPrefix(word)
 	}
 }
