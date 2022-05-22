@@ -51,7 +51,7 @@ func TestArtTree_Insert(t *testing.T) {
 	assert.Equal(t, Value("I'm Value"), value)
 }
 
-type Tests struct {
+type Set struct {
 	key   Key
 	value Value
 }
@@ -74,7 +74,7 @@ func TestArtTree_Insert3(t *testing.T) {
 
 func TestArtTree_Insert2(t *testing.T) {
 	tree := NewArtTree()
-	sets := []Tests{{
+	sets := []Set{{
 		Key("sharedKey::1"), Value("value1"),
 	}, {
 		Key("sharedKey::2"), Value("value2"),
@@ -386,14 +386,14 @@ func (g *keyValueGenerator) prev() (Key, Value) {
 	g.cur--
 	var buf [8]byte
 	binary.PutVarint(buf[:], int64(g.cur))
-	k, v := []byte{byte(g.cur)}, g.generator(buf[:])
+	k, v := buf[:], g.generator(buf[:])
 	return k, v
 }
 
 func (g *keyValueGenerator) next() (Key, Value) {
 	var buf [8]byte
 	binary.PutVarint(buf[:], int64(g.cur))
-	k, v := []byte{byte(g.cur)}, g.generator(buf[:])
+	k, v := buf[:], g.generator(buf[:])
 	g.cur++
 	return k, v
 }
@@ -444,15 +444,15 @@ func TestArtTest_InsertAndDelete(t *testing.T) {
 	tree := NewArtTree()
 	g := NewKeyValueGenerator()
 	// insert 1000
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 10000; i++ {
 		_, _ = tree.Insert(g.next())
 	}
 	g.resetCur()
 	// check inserted kv
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 10000; i++ {
 		k, v := g.next()
 		got, found := tree.Search(k)
-		assert.Equalf(t, v, got, "should insert key-value (%v:%v)", k, v)
+		assert.Equalf(t, v, got, "should insert key-value (%v:%v) but got %v", k, v, got)
 		assert.True(t, found)
 	}
 }

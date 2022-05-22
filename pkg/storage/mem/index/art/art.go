@@ -37,8 +37,8 @@ func (key Key) At(pos int) byte {
 // Value type.
 type Value []byte
 
-func (value Value) Clone() Key {
-	cloned := make(Key, len(value))
+func (value Value) Clone() Value {
+	cloned := make(Value, len(value))
 	copy(cloned, value)
 	return cloned
 }
