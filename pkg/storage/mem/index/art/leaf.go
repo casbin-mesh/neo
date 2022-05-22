@@ -38,6 +38,17 @@ func (l *artLeaf) Match(key Key) bool {
 	return bytes.Compare(l.key, key) == 0
 }
 
+func (l *artLeaf) PartialMatch(key Key, depth uint32) bool {
+	l1key, l2key := l.key, key
+	idx, limit := depth, min(len(l1key), len(l2key))
+	for ; idx < uint32(limit); idx++ {
+		if l1key[idx] != l2key[idx] {
+			break
+		}
+	}
+	return int(idx-depth) > 0
+}
+
 func longestCommonPrefix(l1 *artLeaf, l2 *artLeaf, depth uint32) int {
 	l1key, l2key := l1.key, l2.key
 	idx, limit := depth, min(len(l1key), len(l2key))
