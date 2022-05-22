@@ -88,21 +88,16 @@ func (art *artTree) childrenTraverse(callback Callback, children ...*artNode) {
 	}
 }
 
-func (art *artTree) Seek(partial Key, userCallback Callback, opts ...int) {
-	options := traverseOptions(opts...)
-	callback := traverseFilter(options, userCallback)
+func (art *artTree) seekPrefix(partial Key) *artNode {
 	cur := art.root
 	if partial == nil {
-		art.recursiveTraverse(art.root, callback)
-		return
+		return art.root
 	}
 	depth := uint32(0)
 	for cur != nil {
 		if cur.isLeaf() {
 			if cur.leaf().PartialMatch(partial, depth) || int(depth) == len(partial) {
-				if !callback(cur) {
-					return
-				}
+				return cur
 			}
 			// partial match failed
 			break
@@ -112,8 +107,7 @@ func (art *artTree) Seek(partial Key, userCallback Callback, opts ...int) {
 		if n.partialLen > 0 {
 			prefixMismatchedIdx := cur.prefixMismatch(partial, depth)
 			if depth+prefixMismatchedIdx == uint32(len(partial)) {
-				art.recursiveTraverse(cur, callback)
-				return
+				return cur
 			}
 			if prefixMismatchedIdx == 0 {
 				// nis match
@@ -122,8 +116,7 @@ func (art *artTree) Seek(partial Key, userCallback Callback, opts ...int) {
 			depth += uint32(n.partialLen)
 		} else {
 			if int(depth) == len(partial) {
-				art.recursiveTraverse(cur, callback)
-				return
+				return cur
 			}
 		}
 		next := cur.findChild(partial.At(int(depth)))
@@ -132,5 +125,15 @@ func (art *artTree) Seek(partial Key, userCallback Callback, opts ...int) {
 		}
 		cur = *next
 		depth++
+	}
+	return nil
+}
+
+func (art *artTree) Seek(partial Key, userCallback Callback, opts ...int) {
+	options := traverseOptions(opts...)
+	callback := traverseFilter(options, userCallback)
+	target := art.seekPrefix(partial)
+	if target != nil {
+		art.recursiveTraverse(target, callback)
 	}
 }
