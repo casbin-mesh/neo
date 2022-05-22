@@ -202,7 +202,7 @@ func (art *artTree) recursiveInsert(curNode **artNode, key Key, value Value, dep
 		prefixMismatchedIdx := current.prefixMismatch(key, depth)
 		if int(prefixMismatchedIdx) >= n.partialLen {
 			depth += uint32(n.partialLen)
-			goto RecurseSearch
+			goto RecursiveSearch
 		}
 
 		// prefix lazy extend
@@ -235,7 +235,7 @@ func (art *artTree) recursiveInsert(curNode **artNode, key Key, value Value, dep
 		return value, false
 	}
 
-RecurseSearch:
+RecursiveSearch:
 	// while prefixMismatchedIdx > node prefix len
 	found := current.findChild(key.At(int(depth)))
 	if *found != nil {
