@@ -385,16 +385,18 @@ func (g keyValueGenerator) getValue(key Key) Value {
 
 func (g *keyValueGenerator) prev() (Key, Value) {
 	g.cur--
-	var buf [8]byte
-	binary.PutVarint(buf[:], int64(g.cur))
-	k, v := buf[:], g.generator(buf[:])
+	k, v := g.get()
 	return k, v
 }
 
-func (g *keyValueGenerator) next() (Key, Value) {
+func (g *keyValueGenerator) get() (Key, Value) {
 	var buf [8]byte
 	binary.PutVarint(buf[:], int64(g.cur))
-	k, v := buf[:], g.generator(buf[:])
+	return buf[:], g.generator(buf[:])
+}
+
+func (g *keyValueGenerator) next() (Key, Value) {
+	k, v := g.get()
 	g.cur++
 	return k, v
 }

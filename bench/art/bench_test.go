@@ -20,8 +20,12 @@ import (
 	"bytes"
 	"encoding/binary"
 	"github.com/casbin-mesh/neo/pkg/storage/mem/index/art"
+	"github.com/dgraph-io/badger/v3/skl"
+	"github.com/dgraph-io/badger/v3/y"
+	sArt "github.com/dshulyak/art"
 	gbtree "github.com/google/btree"
 	tbtree "github.com/tidwall/btree"
+
 	"github.com/tidwall/lotsa"
 	"math/rand"
 	"os"
@@ -83,6 +87,18 @@ func Test_Bench(t *testing.T) {
 	println("** sequential set **")
 	sortInts()
 
+	// skl
+	print("sklist:     set-seq        ")
+	sk := skl.NewSkiplist(int64((N + 1) * skl.MaxNodeSize))
+	lotsa.Ops(N, 1, func(i, _ int) {
+		sk.Put(keys[i].key, y.ValueStruct{Value: nil, Meta: 0, UserMeta: 0})
+	})
+	// sartTree
+	print("sArt:      set-seq        ")
+	sart := sArt.Tree{}
+	lotsa.Ops(N, 1, func(i, _ int) {
+		sart.Insert(keys[i].key, nil)
+	})
 	// artTree
 	print("artTree:    set-seq        ")
 	artTree := art.NewArtTree()
@@ -142,10 +158,23 @@ func Test_Bench(t *testing.T) {
 	println()
 	println("** sequential get **")
 	sortInts()
-
+	print("sklist:     get-seq        ")
+	lotsa.Ops(N, 1, func(i, _ int) {
+		v := sk.Get(keys[i].key)
+		if v.Value == nil {
+			panic("not found")
+		}
+	})
 	print("artTree:    get-seq        ")
 	lotsa.Ops(N, 1, func(i, _ int) {
 		_, found := artTree.Search(keys[i].key)
+		if !found {
+			panic("not found")
+		}
+	})
+	print("sArt:      set-seq        ")
+	lotsa.Ops(N, 1, func(i, _ int) {
+		_, found := sart.Get(keys[i].key)
 		if !found {
 			panic("not found")
 		}
@@ -190,6 +219,16 @@ func Test_Bench(t *testing.T) {
 	println("** random set **")
 	shuffleInts()
 
+	sk = skl.NewSkiplist(int64((N + 1) * skl.MaxNodeSize))
+	print("sklist:    set-rand        ")
+	lotsa.Ops(N, 1, func(i, _ int) {
+		sk.Put(keys[i].key, y.ValueStruct{})
+	})
+	sart = sArt.Tree{}
+	print("sArt:      set-rand        ")
+	lotsa.Ops(N, 1, func(i, _ int) {
+		sart.Insert(keys[i].key, nil)
+	})
 	print("artTree:    set-rand       ")
 	artTree = art.NewArtTree()
 	lotsa.Ops(N, 1, func(i, _ int) {
@@ -254,6 +293,20 @@ func Test_Bench(t *testing.T) {
 	}
 	shuffleInts()
 
+	print("sklist:    get-rand        ")
+	lotsa.Ops(N, 1, func(i, _ int) {
+		v := sk.Get(keys[i].key)
+		if v.Value == nil {
+			panic("not found")
+		}
+	})
+	print("sArt:      get-rand        ")
+	lotsa.Ops(N, 1, func(i, _ int) {
+		_, found := sart.Get(keys[i].key)
+		if !found {
+			panic("not found")
+		}
+	})
 	print("artTree:    get-rand       ")
 	lotsa.Ops(N, 1, func(i, _ int) {
 		_, found := artTree.Search(keys[i].key)
@@ -261,6 +314,7 @@ func Test_Bench(t *testing.T) {
 			panic("not found")
 		}
 	})
+
 	print("google:     get-rand       ")
 	lotsa.Ops(N, 1, func(i, _ int) {
 		re := gtr.Get(keys[i])
@@ -299,6 +353,20 @@ func Test_Bench(t *testing.T) {
 
 	println()
 	println("** range **")
+	print("sklist:     iter       ")
+	lotsa.Ops(N, 1, func(i, _ int) {
+		it := sk.NewIterator()
+		for ; it.Valid(); it.Next() {
+		}
+		it.Close()
+	})
+
+	//print("sArt:      iter        ")
+	//lotsa.Ops(N, 1, func(i, _ int) {
+	//	it := sart.Iterator(nil, nil)
+	//	for it.Next() {
+	//	}
+	//})
 	print("artTree:    traverse      ")
 	lotsa.Ops(N, 1, func(i, _ int) {
 		if i == 0 {
