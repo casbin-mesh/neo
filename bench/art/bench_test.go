@@ -355,18 +355,22 @@ func Test_Bench(t *testing.T) {
 	println("** range **")
 	print("sklist:     iter       ")
 	lotsa.Ops(N, 1, func(i, _ int) {
-		it := sk.NewIterator()
-		for ; it.Valid(); it.Next() {
+		if i == 0 {
+			it := sk.NewIterator()
+			for ; it.Valid(); it.Next() {
+			}
+			it.Close()
 		}
-		it.Close()
 	})
 
-	//print("sArt:      iter        ")
-	//lotsa.Ops(N, 1, func(i, _ int) {
-	//	it := sart.Iterator(nil, nil)
-	//	for it.Next() {
-	//	}
-	//})
+	print("sArt:      iter        ")
+	lotsa.Ops(N, 1, func(i, _ int) {
+		if i == 0 {
+			it := sart.Iterator(nil, nil)
+			for it.Next() {
+			}
+		}
+	})
 	print("artTree:    traverse      ")
 	lotsa.Ops(N, 1, func(i, _ int) {
 		if i == 0 {
