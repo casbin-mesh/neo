@@ -14,28 +14,48 @@
 
 package hybrid
 
-import "unsafe"
+import (
+	"sync"
+	"unsafe"
+)
 
 const (
 	PageSize        = 16 * 1024
 	BufferFrameSize = uint64(unsafe.Sizeof(BufferFrame{}))
+	FREE            = State(iota)
+	HOT
+	COOL
+	LOADED
 )
 
-type Page struct {
-	// headers
-	GSN        uint64 //global serial number
-	dType      uint64 // Data Structure Type ID
-	magicDebug uint64 // for debugging
-	// data
-	data [PageSize - 24]byte
-}
+type (
+	State uint8
+	Page  struct {
+		// headers
+		GSN        uint64 //global serial number
+		dType      uint64 // Data Structure Type ID
+		magicDebug uint64 // for debugging
+		// data
+		data [PageSize - 24]byte
+	}
+	Header struct {
+		pid            PID
+		lastWrittenGSN uint64
+		state          State
+		keepInMemory   bool
+		latch          sync.RWMutex
+		nextFreeBF     *BufferFrame
 
-type Header struct {
-	nextFreeBF *BufferFrame
-}
+		debug uint64
+	}
+	BufferFrame struct {
+		Header
+		Page
+	}
+)
 
-type BufferFrame struct {
-	Header
-	Page
+func (bf *BufferFrame) reset() {
+	bf.lastWrittenGSN = 0
+	bf.state = FREE
+	bf.nextFreeBF = nil
 }
-
