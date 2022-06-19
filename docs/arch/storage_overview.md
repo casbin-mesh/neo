@@ -20,7 +20,7 @@ In order to prevent the massive memory cost when policy data grow, we decide to 
 
 ## Overview
 
-![Untitled](Neo%20Column%20Storage%20Brief%20Design%207d70dbd4a8484ff4bdd159fd60d7b419/Untitled.png)
+![overview.png](https://s2.loli.net/2022/06/19/9qnthUywiXe6lS3.png)
 
 ## Metadata File
 
@@ -46,7 +46,7 @@ Such as:
 
 ## Data File Layout
 
-![Untitled](Neo%20Column%20Storage%20Brief%20Design%207d70dbd4a8484ff4bdd159fd60d7b419/Untitled%201.png)
+![block.png](https://s2.loli.net/2022/06/19/eD7U4m6HTaEJYtX.png)
 
 SST file owns a set of blocks and a footer. The footer contains the metadata, like Index Block and Data Block area's position.
 
