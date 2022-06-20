@@ -15,7 +15,6 @@
 package hybrid
 
 import (
-	"log"
 	"sync"
 	"sync/atomic"
 )
@@ -78,7 +77,7 @@ func (l *FreeList) Push(bf *BufferFrame) {
 	if l.head.Load() != nil {
 		bf.nextFreeBF = l.head.Load().(*BufferFrame)
 		for !l.head.CompareAndSwap(bf.nextFreeBF, bf) {
-			log.Println("failed")
+			//log.Println("failed")
 			bf.nextFreeBF = l.head.Load().(*BufferFrame)
 		}
 	} else {
