@@ -58,4 +58,4 @@ func appendBytes(buf []byte, elem ...[]byte) []byte {
 	return buf
 }
 
-func (bs *BSchema) decode([]byte)
+func (bs *BSchema) decode([]byte) {}
