@@ -17,6 +17,8 @@ package hybrid
 import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
+	"sort"
+	"sync"
 	"testing"
 	"unsafe"
 )
@@ -39,4 +41,94 @@ func TestBufferManager_New(t *testing.T) {
 		coolingFramePercentage: 1,  // 1%
 	})
 	assert.NotNil(t, bfm)
+}
+
+func newBufferManager(fd int, num PartitionNum) *BufferManager {
+	bfm := New(&Options{
+		DramSize:               0.001, // 1MB
+		PartitionNum:           num,
+		freeFramePercentage:    10, // 10%
+		coolingFramePercentage: 1,  // 1%
+		fd:                     fd,
+	})
+	return bfm
+}
+
+type BufferFrames []*BufferFrame
+
+func (b BufferFrames) Len() int {
+	return len(b)
+}
+
+func (b BufferFrames) Less(i, j int) bool {
+	return b[i].pid < b[j].pid
+}
+
+func (b BufferFrames) Swap(i, j int) {
+	b[i], b[j] = b[j], b[i]
+}
+
+func AssertAllocatedPages(t *testing.T, allocated BufferFrames, partitionCount, pidStart int, pageCount int) {
+	assert.Equal(t, pageCount-pidStart, len(allocated))
+	allocatedMap := map[int]BufferFrames{}
+
+	for i := 0; i < len(allocated); i++ {
+		bf := allocated[i]
+		idx := int(bf.pid) % partitionCount
+		allocatedMap[idx] = append(allocatedMap[idx], allocated[i])
+	}
+
+	// assert each partitions
+	for _, frames := range allocatedMap {
+		// next.pid = previous.pid + partitionCount
+		for i, frame := range frames {
+			exp := PID(int(frames[0].pid) + i*partitionCount)
+			assert.Equal(t, exp, frame.pid, "iter:%d, should be :%d,but got %d\n", i, exp, frame.pid)
+		}
+	}
+}
+
+func TestBufferManager_AllocatePage(t *testing.T) {
+	t.Run("single thread test", func(t *testing.T) {
+		bm := newBufferManager(-1, Partition1)
+		// allocate a new page
+		bf := bm.AllocatePage()
+		data := "hello world!"
+		// write data into page
+		copy(bf.Page.data[:], data)
+		assert.Equal(t, PID(0), bf.pid)
+
+		// allocate another new page
+		bf2 := bm.AllocatePage()
+		assert.Equal(t, PID(1), bf2.pid)
+	})
+
+	t.Run("sync", func(t *testing.T) {
+		bm := newBufferManager(-1, Partition4)
+		wg := sync.WaitGroup{}
+		pageCount := 12
+		var (
+			allocated BufferFrames
+			mu        sync.Mutex
+		)
+
+		for i := 0; i < pageCount; i++ {
+			wg.Add(1)
+			go func() {
+				b := bm.AllocatePage()
+
+				mu.Lock()
+				allocated = append(allocated, b)
+				mu.Unlock()
+
+				wg.Done()
+			}()
+		}
+
+		wg.Wait()
+
+		sort.Sort(allocated)
+		AssertAllocatedPages(t, allocated, 4, 0, pageCount)
+	})
+
 }

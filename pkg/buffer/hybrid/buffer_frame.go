@@ -21,6 +21,7 @@ import (
 
 const (
 	PageSize        = 16 * 1024
+	PageBodySize    = PageSize - 24
 	BufferFrameSize = uint64(unsafe.Sizeof(BufferFrame{}))
 	FREE            = State(iota)
 	HOT
@@ -36,7 +37,7 @@ type (
 		dType      uint64 // Data Structure Type ID
 		magicDebug uint64 // for debugging
 		// data
-		data [PageSize - 24]byte
+		data [PageBodySize]byte
 	}
 	Header struct {
 		pid            PID
@@ -47,7 +48,7 @@ type (
 		nextFreeBF     *BufferFrame
 
 		debug uint64
-	}
+	} // in memory
 	BufferFrame struct {
 		Header
 		Page
