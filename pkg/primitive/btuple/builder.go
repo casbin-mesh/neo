@@ -34,6 +34,13 @@ type builder struct {
 	len       int
 }
 
+// Reset resets all fields excludes BTupleType
+func (b *builder) Reset() {
+	b.elems = nil
+	b.offset = nil
+	b.len = 0
+}
+
 func (b *builder) Size() int {
 	return SizeOfHeader + len(b.offset)*4 + b.len
 }
