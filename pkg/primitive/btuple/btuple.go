@@ -19,7 +19,7 @@ import (
 	"github.com/casbin-mesh/neo/pkg/primitive/codec"
 )
 
-type BufferedReader interface {
+type Reader interface {
 	ValueAt(pos int) Elem
 	Occupied(pos int) bool
 	buildHint() error
@@ -85,7 +85,7 @@ func (b *bufferedReader) Occupied(pos int) bool {
 
 // NewReader return a tuple reader.
 // NOTES: data should be immutable.
-func NewReader(data []byte) (BufferedReader, error) {
+func NewReader(data []byte) (Reader, error) {
 	r := &bufferedReader{raw: data, mt: make(map[int]mapping)}
 	err := r.buildHint()
 	return r, err
