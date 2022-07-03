@@ -26,7 +26,7 @@ type Item interface {
 	//
 	// This function is useful in long running iterate/update transactions to avoid a write deadlock.
 	// See Github issue: https://github.com/dgraph-io/badger/issues/315
-	ValueCopy(dst []byte) []byte
+	ValueCopy(dst []byte) ([]byte, error)
 }
 
 type Txn interface {
@@ -40,4 +40,5 @@ type Txn interface {
 
 type DB interface {
 	NewTransaction(update bool) Txn
+	Close() error
 }
