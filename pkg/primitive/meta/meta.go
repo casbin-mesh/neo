@@ -25,7 +25,7 @@ type KeyValue interface {
 	Value
 }
 type Value interface {
-	ValueCopy([]byte) []byte
+	ValueCopy([]byte) ([]byte, error)
 }
 
 type Reader interface {
@@ -72,7 +72,11 @@ func (m meta) Get(namespace []byte, name []byte) (Value, error) {
 
 func (m meta) Set(namespace []byte, schema KeyValue) error {
 	key := utils.CString(namespace, schema.Key())
-	if err := m.txn.Set(key, schema.ValueCopy(nil)); err != nil {
+	value, err := schema.ValueCopy(nil)
+	if err != nil {
+		return err
+	}
+	if err = m.txn.Set(key, value); err != nil {
 		return err
 	}
 	return nil
