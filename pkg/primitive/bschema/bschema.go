@@ -23,20 +23,26 @@ type BSchema interface {
 	// ValueCopy returns a copy of the value of the item from the value bytes, writing it to dst slice.
 	// If nil is passed, or capacity of dst isn't sufficient, a new slice would be allocated and
 	// returned.
-	ValueCopy(dst []byte) []byte
+	ValueCopy(bytes []byte) ([]byte, error)
 }
 
 type ReaderWriter interface {
+	BSchema
 	Writer
 	Reader
 }
 
 type Writer interface {
+	Append(typ bsontype.Type, name []byte)
 	EncodeVal() []byte
 	EncodeKey() []byte
 }
 
 type Reader interface {
+	Namespace() []byte
+	FieldAt(pos int) Field
+	FieldsLen() int
+
 	DecodeVal(src []byte)
 	DecodeKey(src []byte)
 }
@@ -67,6 +73,18 @@ func (bs *readerWriter) FieldsLen() int { return len(bs.fields) }
 
 func (bs *readerWriter) FieldAt(pos int) Field {
 	return bs.fields[pos]
+}
+
+func (r *readerWriter) Key() []byte {
+	return r.EncodeKey()
+}
+
+func (r *readerWriter) ValueCopy(dst []byte) ([]byte, error) {
+	if len(dst) < r.valLen {
+		return r.EncodeVal(), nil
+	}
+	copy(dst, r.EncodeVal())
+	return nil, nil
 }
 
 // EncodeKey
