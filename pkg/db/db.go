@@ -30,15 +30,28 @@ type Item interface {
 }
 
 type Txn interface {
+	// CommitAt commits the transaction, following the same logic as Commit(), but
+	// at the given commit timestamp. This will panic if not used with managed transactions.
+	//
+	// This is only useful for databases built on top of Badger (like Dgraph), and
+	// can be ignored by most users.
+	CommitAt(commitTs uint64, callback func(error)) error
 	Discard()
-	Commit() error
-	CommitWith(cb func(err error))
 	Set([]byte, []byte) error
 	Delete([]byte) error
 	Get([]byte) (Item, error)
 }
 
 type DB interface {
-	NewTransaction(update bool) Txn
+	// NewTransactionAt follows the same logic as DB.NewTransaction(), but uses the
+	// provided read timestamp.
+	//
+	// This is only useful for databases built on top of Badger (like Dgraph), and
+	// can be ignored by most users.
+	NewTransactionAt(readTs uint64, update bool) Txn
+	// SetDiscardTs sets a timestamp at or below which, any invalid or deleted
+	// versions can be discarded from the LSM tree, and thence from the value log to
+	// reclaim disk space. Can only be used with managed transactions.
+	SetDiscardTs(ts uint64)
 	Close() error
 }
