@@ -157,7 +157,7 @@ func (n *inner[T]) insert(l *leaf[T], depth int, parent *olock, parentVersion ui
 		}
 
 		nextDepth := depth + n.prefixLen
-		idx, next := n.node.child(l.key[nextDepth])
+		idx, next := n.node.child(l.key.At(nextDepth))
 
 		if next == nil {
 			if n.lock.Upgrade(version, nil) {
@@ -169,7 +169,7 @@ func (n *inner[T]) insert(l *leaf[T], depth int, parent *olock, parentVersion ui
 			if n.node.full() {
 				n.node = n.node.grow()
 			}
-			n.node.addChild(l.key[nextDepth], l)
+			n.node.addChild(l.key.At(nextDepth), l)
 			n.lock.Unlock()
 			return n, false, false
 		}
@@ -338,6 +338,7 @@ func memcpy[T any](dst []T, src []T, len int) {
 }
 
 func (n *inner[T]) addPrefixBefore(node *inner[T], key byte) {
+	// new prefix: { node prefix } { key } { n(this) prefix }
 	prefixCount := min(maxPrefixLen, node.prefixLen+1)
 	memcpy(n.prefix[prefixCount:], n.prefix[:], min(n.prefixLen, maxPrefixLen-prefixCount))
 	memcpy(n.prefix[:], node.prefix[:], min(prefixCount, node.prefixLen))
