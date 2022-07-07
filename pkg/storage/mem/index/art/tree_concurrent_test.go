@@ -43,6 +43,19 @@ func TestTree_ConcurrentInsert(t *testing.T) {
 	}
 }
 
+func BenchmarkArtConcurrentInsert(b *testing.B) {
+	value := newValue(123)
+	l := Tree[[]byte]{}
+	b.ResetTimer()
+	//var count int
+	b.RunParallel(func(pb *testing.PB) {
+		rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+		for pb.Next() {
+			l.Insert(randomKey(rng), value)
+		}
+	})
+}
+
 func BenchmarkAnotherArtConcurrentInsert(b *testing.B) {
 	value := newValue(123)
 	l := art.Tree{}

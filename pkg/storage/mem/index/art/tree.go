@@ -36,7 +36,7 @@ func (t *Tree[T]) Insert(key Key, value T) (updated bool) {
 			atomic.AddInt64(&t.size, 1)
 			return
 		}
-		if root.isLeaf() {
+		if _, ok := root.(*leaf[T]); ok {
 			if t.lock.Upgrade(version, nil) {
 				continue // restart
 			}

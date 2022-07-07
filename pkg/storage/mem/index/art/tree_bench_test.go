@@ -72,7 +72,6 @@ func BenchmarkArtReadWrite(b *testing.B) {
 	value := newValue(123)
 	for i := 0; i <= 10; i++ {
 		readFrac := float32(i) / 10.0
-		mu := sync.RWMutex{}
 		b.Run(fmt.Sprintf("frac_%d", i), func(b *testing.B) {
 			l := NewArtTree()
 			b.ResetTimer()
@@ -83,13 +82,10 @@ func BenchmarkArtReadWrite(b *testing.B) {
 					if rng.Float32() < readFrac {
 						l.Search(randomKey(rng))
 					} else {
-						mu.Lock()
 						l.Insert(randomKey(rng), value)
-						mu.Unlock()
 					}
 				}
 			})
-
 		})
 	}
 }

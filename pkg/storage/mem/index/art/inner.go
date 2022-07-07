@@ -176,11 +176,13 @@ func (n *inner[T]) insert(l *leaf[T], depth int, parent *olock, parentVersion ui
 		if parent.RUnlock(parentVersion, nil) {
 			return n, true, false
 		}
-		if next.isLeaf() {
+		if n.lock.Check(version) {
+			continue
+		}
+		if _, ok := next.(*leaf[T]); ok {
 			if n.lock.Upgrade(version, nil) {
 				continue
 			}
-
 			replacement, _, updated := next.insert(l, nextDepth+1, &n.lock, version)
 			n.node.replace(idx, replacement)
 			n.lock.Unlock()
@@ -313,7 +315,7 @@ func (n *inner[T]) get(key Key, depth int, parent *olock, parentVersion uint64) 
 			}
 			return value, false, false
 		}
-		if next.isLeaf() {
+		if _, ok := next.(*leaf[T]); ok {
 			value, found, _ = next.get(key, nextDepth+1, &n.lock, version)
 			if n.lock.RUnlock(version, nil) {
 				continue
