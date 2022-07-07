@@ -18,8 +18,10 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/dshulyak/art"
+	"github.com/stretchr/testify/assert"
 	tbtree "github.com/tidwall/btree"
 	"math/rand"
+	"sync"
 	"testing"
 	"time"
 )
@@ -34,12 +36,50 @@ func TestArtTest_Insert(t *testing.T) {
 func TestTree_ConcurrentInsert(t *testing.T) {
 	t.Parallel()
 	// set up
+	N := 1_000_000
 	tree := Tree[int]{}
-	for i := 0; i < 10_000_000; i++ {
+	wg := sync.WaitGroup{}
+	for i := 0; i < N; i++ {
+		wg.Add(1)
+		go func(i int) {
+			tree.Insert(Key(fmt.Sprintf("sharedNode::%d", i)), i)
+			wg.Done()
+		}(i)
+	}
+	wg.Wait()
+	for i := 0; i < N; i++ {
+		value, found := tree.Search(Key(fmt.Sprintf("sharedNode::%d", i)))
+		assert.True(t, found)
+		assert.Equal(t, i, value)
+	}
+}
+
+func TestTree_ConcurrentInsert2(t *testing.T) {
+	t.Parallel()
+	// set up
+	N := 1_000_000
+	tree := Tree[[]byte]{}
+	inserted := []Key{}
+	mu := sync.RWMutex{}
+	wg := sync.WaitGroup{}
+
+	for i := 0; i < N; i++ {
+		wg.Add(1)
 		go func(i int) {
 			rng := rand.New(rand.NewSource(time.Now().UnixNano()))
-			tree.Insert(randomKey(rng), 123)
+			k := randomKey(rng)
+			tree.Insert(k, k)
+			mu.Lock()
+			inserted = append(inserted, k)
+			mu.Unlock()
+			wg.Done()
 		}(i)
+	}
+	wg.Wait()
+	for _, key := range inserted {
+		value, found := tree.Search(key)
+		assert.True(t, found)
+		assert.Equal(t, []byte(key), value)
 	}
 }
 
