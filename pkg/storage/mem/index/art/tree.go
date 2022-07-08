@@ -130,6 +130,17 @@ func (t *Tree[T]) Empty() (empty bool) {
 	}
 }
 
+// Iterator in range (start, end].
+// Iterator is concurrently safe, but doesn't guarantee to provide consistent
+// snapshot of the tree state.
+func (t *Tree[T]) Iterator(start, end []byte) *iterator[T] {
+	return &iterator[T]{
+		tree:      t,
+		cursor:    start,
+		terminate: end,
+	}
+}
+
 type Ordered interface {
 	int | int8 | int16 | int32 | int64 | uint | uint8 | uint16 | uint32 | uint64 | uintptr | float32 | float64
 }
