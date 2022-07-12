@@ -12,27 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package neo
+package utils
 
-import (
-	"github.com/casbin-mesh/neo/pkg/db"
-)
-
-type neo struct {
-	db db.DB
-	//TODO(weny): add meta store?
-}
-
-func New(opt Options) *neo {
-	return &neo{db: opt.db}
-}
-
-func (n *neo) NewMutationAt(readTs uint64, namespace []byte) (*mutation, error) {
-	txn := n.db.NewTransactionAt(readTs, false)
-	// TODO: cache store
-	// TODO: function store
-	return &mutation{
-		ctx: NewCtx(namespace),
-		txn: txn,
-	}, nil
+// CString add the CString null terminator for each string
+func CString(str ...[]byte) []byte {
+	var dst []byte
+	for _, s := range str {
+		dst = append(dst, s...)
+		dst = append(dst, 0)
+	}
+	return dst
 }

@@ -15,34 +15,137 @@
 package neo
 
 import (
+	"bufio"
 	"github.com/casbin-mesh/neo/pkg/db"
+	"github.com/casbin-mesh/neo/pkg/neo/utils"
+	"github.com/casbin-mesh/neo/pkg/primitive/bschema"
+	"github.com/casbin-mesh/neo/pkg/primitive/bsontype"
 	"github.com/casbin-mesh/neo/pkg/primitive/btuple"
-	"github.com/casbin-mesh/neo/pkg/primitive/meta"
+	"io"
+	"strings"
 )
 
 type mutation struct {
-	ctx *mutationCtx
-	txn db.Txn
+	readTs   uint64
+	commitTs uint64
+	ctx      *mutationCtx
+	txn      db.Txn
 }
 
-type mutationCtx struct {
-	namespace []byte
-	metaRW    meta.ReaderWriter
+type KeyValue interface {
+	Key() []byte
+	Value
 }
 
 type Value interface {
 	ValueCopy() []byte
 }
 
-// ParseModel parses model string from user inputs
-func (m *mutation) ParseModel(modelStr string) error {
-	// 1. parses request schema definitions
-	// 1.1 m.ctx.metaRW.Set(m.ctx.namespace,BSchema)
+type ParseModelOptions struct {
+	// Warm if true, engine caches this model definitions, and builds functions that will inject into matchers
+	Warm bool
+}
 
-	// 2. parses policies schema definitions
-	// 3. parses group schema definitions
-	// 4. parses effect definitions
-	// 5. parses matcher schema definitions
+func (m *mutation) parseAndBuildMatcher(key, def string) {
+	// parse matcher
+	// inject functions
+}
+
+// ParseModel parses model string from user inputs
+func (m *mutation) ParseModel(reader io.Reader, opts ParseModelOptions) error {
+	c, err := utils.NewParse(bufio.NewReader(reader))
+	if err != nil {
+		return err
+	}
+	rd := c.RequestDef()
+	ns := m.ctx.namespace
+
+	// TODO: uses yaac to parse model. for now, we treat all definitions as strings.
+
+	// ---------------------------- Request definitions
+	// key patten: | namespace \x00 | name{prefix r} \x00 |
+	// parses request schema definitions
+	for key, def := range rd {
+		// TODO(weny): cache the builder
+		builder := bschema.NewReaderWriter(ns, []byte(key))
+		fields := strings.Split(def, ",")
+		for _, field := range fields {
+			builder.Append(bsontype.String, []byte(field))
+		}
+
+		err = m.txn.Set(builder.EncodeKey(), builder.EncodeVal())
+		if err != nil {
+			return err
+		}
+	}
+
+	// ---------------------------- Policy definitions
+	// key patten: | namespace \x00 | name{prefix p} \x00 |
+	// parses policies schema definitions
+	pd := c.PolicyDef()
+	for key, def := range pd {
+		// TODO(weny): cache the builder
+		builder := bschema.NewReaderWriter(ns, []byte(key))
+		fields := strings.Split(def, ",")
+		for _, field := range fields {
+			builder.Append(bsontype.String, []byte(field))
+		}
+		err = m.txn.Set(builder.EncodeKey(), builder.EncodeVal())
+		if err != nil {
+			return err
+		}
+		if opts.Warm {
+
+		}
+	}
+
+	// ---------------------------- Optional Role definitions
+	// key patten: | namespace \x00 | name{prefix g} \x00 |
+	// parses policies schema definitions
+	gd := c.RoleDef()
+	for key, def := range gd {
+		// TODO(weny): cache the builder
+		builder := bschema.NewReaderWriter(ns, []byte(key))
+		fields := strings.Split(def, ",")
+		for _, field := range fields {
+			builder.Append(bsontype.String, []byte(field))
+		}
+		err = m.txn.Set(builder.EncodeKey(), builder.EncodeVal())
+		if err != nil {
+			return err
+		}
+		if opts.Warm {
+
+		}
+	}
+
+	// ---------------------------- Optional Effect definitions
+	// key patten: | namespace \x00 | name{prefix e} \x00 |
+	// parses effect definitions
+	// TODO: cache effect
+	pe := c.PolicyEffect()
+	for key, def := range pe {
+		if err = m.txn.Set(utils.CString(ns, []byte(key)), []byte(def)); err != nil {
+			return err
+		}
+		if opts.Warm {
+
+		}
+	}
+
+	// ---------------------------- Matcher definitions
+	// key patten: | namespace \x00 | name{prefix m} \x00 |
+	// parses matcher schema definitions
+	// TODO: cache matcher
+	ms := c.Matchers()
+	for key, def := range ms {
+		if err = m.txn.Set(utils.CString(ns, []byte(key)), []byte(def)); err != nil {
+			return err
+		}
+		if opts.Warm {
+			m.parseAndBuildMatcher(key, def)
+		}
+	}
 	return nil
 }
 
@@ -75,10 +178,10 @@ func (m *mutation) UpdatePolicy(schemaName []byte, old, new btuple.Reader) (upda
 	return false
 }
 
-func (m *mutation) Commit() error {
+func (m *mutation) CommitAt(commitTs uint64) error {
 	// commit mutation txn
 	// commit indexes changes
-	return nil
+	return m.txn.CommitAt(commitTs, nil)
 }
 
 func (m *mutation) Abort() error {

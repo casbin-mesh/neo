@@ -12,27 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package neo
+package index
 
-import (
-	"github.com/casbin-mesh/neo/pkg/db"
-)
+import "sync"
 
-type neo struct {
-	db db.DB
-	//TODO(weny): add meta store?
+type VersionChainHead[T any] struct {
+	next *Value[T]
+	mu   sync.Mutex
 }
 
-func New(opt Options) *neo {
-	return &neo{db: opt.db}
-}
+// Value value and Timestamp Ordering header (MVTO)
+type Value[T any] struct {
+	// header
+	// if txn is not zero, means the write-lock hold by the txn
+	txn         uint64
+	readTs      uint64
+	beginTs     uint64
+	endTs       uint64 // TODO: uses uint64.MAX to represent the +INF ?
+	uncommitted bool
 
-func (n *neo) NewMutationAt(readTs uint64, namespace []byte) (*mutation, error) {
-	txn := n.db.NewTransactionAt(readTs, false)
-	// TODO: cache store
-	// TODO: function store
-	return &mutation{
-		ctx: NewCtx(namespace),
-		txn: txn,
-	}, nil
+	// pointer to older version
+	next *Value[T]
+	// value
+	value T
 }

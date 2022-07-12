@@ -1,4 +1,4 @@
-// Copyright 2022 The casbin-mesh Authors. All Rights Reserved.
+// Copyright 2022 The casbin-neo Authors. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,25 +14,10 @@
 
 package neo
 
-import (
-	"github.com/casbin-mesh/neo/pkg/db"
-)
-
-type neo struct {
-	db db.DB
-	//TODO(weny): add meta store?
+type mutationCtx struct {
+	namespace []byte
 }
 
-func New(opt Options) *neo {
-	return &neo{db: opt.db}
-}
-
-func (n *neo) NewMutationAt(readTs uint64, namespace []byte) (*mutation, error) {
-	txn := n.db.NewTransactionAt(readTs, false)
-	// TODO: cache store
-	// TODO: function store
-	return &mutation{
-		ctx: NewCtx(namespace),
-		txn: txn,
-	}, nil
+func NewCtx(namespace []byte) *mutationCtx {
+	return &mutationCtx{namespace}
 }
