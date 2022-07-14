@@ -20,7 +20,11 @@ import (
 	"sync/atomic"
 )
 
-type Txn interface {
+type Txn[T any] interface {
+	Get(key []byte) (ret T, err error)
+	Set(key []byte, value T) error
+	CommitAt(commitTs uint64, callback func(error)) error
+	ReadTS() uint64
 }
 
 type txn[T any] struct {
