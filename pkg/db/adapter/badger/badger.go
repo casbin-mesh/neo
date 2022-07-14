@@ -24,7 +24,12 @@ type adapter struct {
 }
 
 type txn struct {
-	txn *badger.Txn
+	txn    *badger.Txn
+	readTs uint64
+}
+
+func (t txn) CommitAt(commitTs uint64, callback func(error)) error {
+	return t.txn.CommitAt(commitTs, callback)
 }
 
 func (t txn) Discard() {
@@ -51,9 +56,26 @@ func (t txn) Get(k []byte) (db.Item, error) {
 	return t.txn.Get(k)
 }
 
+func (b adapter) NewTransactionAt(readTs uint64, update bool) db.Txn {
+	t := b.db.NewTransactionAt(readTs, update)
+	return &txn{txn: t, readTs: readTs}
+}
+
 func (b adapter) NewTransaction(update bool) db.Txn {
 	t := b.db.NewTransaction(update)
 	return &txn{txn: t}
+}
+
+func (b adapter) SetDiscardTs(ts uint64) {
+	b.db.SetDiscardTs(ts)
+}
+
+func OpenManaged(opt badger.Options) (db.DB, error) {
+	db, err := badger.OpenManaged(opt)
+	if err != nil {
+		return nil, err
+	}
+	return &adapter{db: db}, nil
 }
 
 func Open(opt badger.Options) (db.DB, error) {
