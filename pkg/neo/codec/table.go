@@ -20,11 +20,12 @@ import (
 	flatbuffers "github.com/google/flatbuffers/go"
 )
 
-// TableInfoKey t{id}
+// TableInfoKey s_t{id}
 func TableInfoKey(tableId uint64) []byte {
-	buf := make([]byte, 0, 9)
+	buf := make([]byte, 0, 11)
+	buf = append(buf, mSchemaPrefix...)
 	buf = append(buf, tablePrefix...)
-	appendUint64(buf, tableId)
+	buf = appendUint64(buf, tableId)
 	return buf
 }
 

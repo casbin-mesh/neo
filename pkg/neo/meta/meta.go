@@ -23,19 +23,19 @@ import (
 
 type Reader interface {
 	GetDBId(namespace string) (uint64, error)
-	GetTableId(table string) (uint64, error)
-	GetIndexId(index string) (uint64, error)
-	GetMatcherId(matcher string) (uint64, error)
-	GetColumnId(column string) (uint64, error)
+	GetTableId(did uint64, table string) (uint64, error)
+	GetIndexId(tid uint64, index string) (uint64, error)
+	GetMatcherId(did uint64, matcher string) (uint64, error)
+	GetColumnId(tid uint64, column string) (uint64, error)
 }
 
 type ReaderWriter interface {
 	Reader
 	NewDb(namespace string) (uint64, error)
-	NewTable(tableName string) (tableId uint64, err error)
-	NewIndex(indexName string) (indexId uint64, err error)
-	NewMatcher(matcher string) (matcherId uint64, err error)
-	NewColumn(column string) (columnId uint64, err error)
+	NewTable(did uint64, tableName string) (tableId uint64, err error)
+	NewIndex(tid uint64, indexName string) (indexId uint64, err error)
+	NewMatcher(did uint64, matcher string) (matcherId uint64, err error)
+	NewColumn(tid uint64, column string) (columnId uint64, err error)
 
 	CommitAt(commitTs uint64) error
 	Rollback()
@@ -100,8 +100,8 @@ func (i *inMemMeta) NextGlobalId() (uint64, error) {
 }
 
 func (i *inMemMeta) getMeta(key []byte) (uint64, error) {
-	value, exists := i.Get(key)
-	if exists == index.ErrKeyNotExists {
+	value, err := i.Get(key)
+	if IsErrNotFound(err) {
 		return 0, ErrKeyNotExists
 	}
 	if id, ok := value.(uint64); ok {
@@ -114,20 +114,20 @@ func (i *inMemMeta) GetDBId(namespace string) (uint64, error) {
 	return i.getMeta(codec.MetaKey(namespace))
 }
 
-func (i *inMemMeta) GetTableId(table string) (uint64, error) {
-	return i.getMeta(codec.TableKey(table))
+func (i *inMemMeta) GetTableId(did uint64, table string) (uint64, error) {
+	return i.getMeta(codec.TableKey(did, table))
 }
 
-func (i *inMemMeta) GetIndexId(index string) (uint64, error) {
-	return i.getMeta(codec.IndexKey(index))
+func (i *inMemMeta) GetIndexId(tid uint64, index string) (uint64, error) {
+	return i.getMeta(codec.IndexKey(tid, index))
 }
 
-func (i *inMemMeta) GetMatcherId(matcher string) (uint64, error) {
-	return i.getMeta(codec.MatcherKey(matcher))
+func (i *inMemMeta) GetMatcherId(did uint64, matcher string) (uint64, error) {
+	return i.getMeta(codec.MatcherKey(did, matcher))
 }
 
-func (i *inMemMeta) GetColumnId(column string) (uint64, error) {
-	return i.getMeta(codec.ColumnKey(column))
+func (i *inMemMeta) GetColumnId(tid uint64, column string) (uint64, error) {
+	return i.getMeta(codec.ColumnKey(tid, column))
 }
 
 type nextIdGen func() (uint64, error)
@@ -150,8 +150,8 @@ func (i *inMemMeta) newMeta(key []byte, idGen nextIdGen) (uint64, error) {
 	return nextId, nil
 }
 
-func (i *inMemMeta) NewColumn(column string) (columnId uint64, err error) {
-	return i.newMeta(codec.ColumnKey(column), func() (uint64, error) {
+func (i *inMemMeta) NewColumn(tid uint64, column string) (columnId uint64, err error) {
+	return i.newMeta(codec.ColumnKey(tid, column), func() (uint64, error) {
 		return i.incUint64(mNextGlobalColumnIDKey, 1)
 	})
 }
@@ -160,20 +160,20 @@ func (i *inMemMeta) NewDb(namespace string) (uint64, error) {
 	return i.newMeta(codec.MetaKey(namespace), i.NextGlobalId)
 }
 
-func (i *inMemMeta) NewTable(tableName string) (tableId uint64, err error) {
-	return i.newMeta(codec.TableKey(tableName), func() (uint64, error) {
+func (i *inMemMeta) NewTable(did uint64, tableName string) (tableId uint64, err error) {
+	return i.newMeta(codec.TableKey(did, tableName), func() (uint64, error) {
 		return i.incUint64(mNextGlobalTableIDKey, 1)
 	})
 }
 
-func (i *inMemMeta) NewIndex(indexName string) (indexId uint64, err error) {
-	return i.newMeta(codec.IndexKey(indexName), func() (uint64, error) {
+func (i *inMemMeta) NewIndex(tid uint64, indexName string) (indexId uint64, err error) {
+	return i.newMeta(codec.IndexKey(tid, indexName), func() (uint64, error) {
 		return i.incUint64(mNextGlobalIndexIDKey, 1)
 	})
 }
 
-func (i *inMemMeta) NewMatcher(matcher string) (matcherId uint64, err error) {
-	return i.newMeta(codec.MatcherKey(matcher), func() (uint64, error) {
+func (i *inMemMeta) NewMatcher(did uint64, matcher string) (matcherId uint64, err error) {
+	return i.newMeta(codec.MatcherKey(did, matcher), func() (uint64, error) {
 		return i.incUint64(mNextGlobalMatcherIDKey, 1)
 	})
 }

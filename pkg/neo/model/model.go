@@ -14,6 +14,10 @@
 
 package model
 
+type Cloneable interface {
+	Clone() Cloneable
+}
+
 // CIStr is case insensitive string.
 type CIStr struct {
 	O string
@@ -23,7 +27,7 @@ type CIStr struct {
 type ColumnInfo struct {
 	ID              uint64
 	Name            CIStr
-	DefaultValue    interface{}
+	DefaultValue    Cloneable
 	DefaultValueBit []byte
 }
 
@@ -68,4 +72,60 @@ type DBInfo struct {
 	Name        CIStr
 	TableInfo   []*TableInfo
 	MatcherInfo []*MatcherInfo
+}
+
+func (f *FKInfo) Clone() *FKInfo {
+	nf := *f
+	nf.RefCols = make([]CIStr, len(f.RefCols))
+	nf.Cols = make([]CIStr, len(f.Cols))
+	copy(nf.RefCols, f.RefCols)
+	copy(nf.Cols, f.Cols)
+	return &nf
+}
+
+func (i *IndexInfo) Clone() *IndexInfo {
+	return &*i
+}
+
+func (t *TableInfo) Clone() *TableInfo {
+	nt := *t
+	nt.Columns = make([]*ColumnInfo, len(t.Columns))
+	nt.Indices = make([]*IndexInfo, len(t.Indices))
+	nt.ForeignKeys = make([]*FKInfo, len(t.ForeignKeys))
+	for i, column := range t.Columns {
+		nt.Columns[i] = column.Clone()
+	}
+	for i, index := range t.Indices {
+		nt.Indices[i] = index.Clone()
+	}
+	for i, key := range t.ForeignKeys {
+		nt.ForeignKeys[i] = key.Clone()
+	}
+	return &nt
+}
+
+func (c *ColumnInfo) Clone() *ColumnInfo {
+	nc := *c
+	if nc.DefaultValue != nil {
+		nc.DefaultValue = c.DefaultValue.Clone()
+	}
+	nc.DefaultValueBit = append([]byte{}, nc.DefaultValueBit...)
+	return &nc
+}
+
+func (m *MatcherInfo) Clone() *MatcherInfo {
+	return &*m
+}
+
+func (d *DBInfo) Clone() *DBInfo {
+	nd := *d
+	nd.MatcherInfo = make([]*MatcherInfo, len(d.MatcherInfo))
+	for i, info := range d.MatcherInfo {
+		nd.MatcherInfo[i] = info.Clone()
+	}
+	nd.TableInfo = make([]*TableInfo, len(d.TableInfo))
+	for i, info := range d.TableInfo {
+		nd.TableInfo[i] = info.Clone()
+	}
+	return &nd
 }

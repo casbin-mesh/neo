@@ -19,6 +19,7 @@ import (
 	"github.com/casbin-mesh/neo/pkg/db"
 	"github.com/casbin-mesh/neo/pkg/neo/meta"
 	"github.com/casbin-mesh/neo/pkg/neo/schema"
+	"github.com/dgraph-io/badger/v3/y"
 )
 
 type Context interface {
@@ -30,9 +31,10 @@ type Context interface {
 }
 
 type ctx struct {
-	txn    db.Txn
-	meta   meta.ReaderWriter
-	schema schema.ReaderWriter
+	txn     db.Txn
+	meta    meta.ReaderWriter
+	schema  schema.ReaderWriter
+	txnMark *y.WaterMark
 }
 
 func (c ctx) GetSchemaReaderWriter() schema.ReaderWriter {
@@ -48,16 +50,18 @@ func (c ctx) GetMetaReaderWriter() meta.ReaderWriter {
 }
 
 func (c ctx) CommitTxn(ctx context.Context, commitTs uint64) error {
-	return c.txn.CommitAt(commitTs, func(err error) {
+	err := c.txn.CommitAt(commitTs, func(err error) {
 		if err != nil {
 			c.RollbackTxn(ctx)
 			return
 		}
 
 		// TODO: handle failures
-		c.meta.CommitAt(commitTs)
-		c.schema.CommitAt(commitTs)
+		err = c.meta.CommitAt(commitTs)
+		err = c.schema.CommitAt(commitTs)
+		c.txnMark.Done(commitTs)
 	})
+	return err
 }
 
 func (c ctx) RollbackTxn(ctx context.Context) {
@@ -66,6 +70,6 @@ func (c ctx) RollbackTxn(ctx context.Context) {
 	c.schema.Rollback()
 }
 
-func NewSessionCtx(txn db.Txn, meta meta.ReaderWriter, schema schema.ReaderWriter) Context {
-	return &ctx{txn: txn, meta: meta, schema: schema}
+func NewSessionCtx(txn db.Txn, meta meta.ReaderWriter, schema schema.ReaderWriter, txnMark *y.WaterMark) Context {
+	return &ctx{txn: txn, meta: meta, schema: schema, txnMark: txnMark}
 }

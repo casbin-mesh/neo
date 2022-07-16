@@ -20,11 +20,12 @@ import (
 	flatbuffers "github.com/google/flatbuffers/go"
 )
 
-// MatcherInfoKey t{id}
+// MatcherInfoKey s_m{id}
 func MatcherInfoKey(matcherId uint64) []byte {
-	buf := make([]byte, 0, 9)
+	buf := make([]byte, 0, 11)
+	buf = append(buf, mSchemaPrefix...)
 	buf = append(buf, matcherPrefix...)
-	appendUint64(buf, matcherId)
+	buf = appendUint64(buf, matcherId)
 	return buf
 }
 
