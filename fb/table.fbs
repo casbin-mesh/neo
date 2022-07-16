@@ -1,0 +1,59 @@
+namespace fb;
+
+table CIStr {
+    o:string;
+    l:string;
+}
+
+table ColumnInfo {
+    id:ulong;
+    name:CIStr;
+    default_value:[ubyte];
+}
+
+table IndexInfo{
+    id:ulong;
+    name:CIStr;
+    table_name:CIStr;
+    unique:bool;
+    primary:bool;
+    tp:ubyte;
+}
+
+table FKInfo{
+    id:ulong;
+    name:CIStr;
+    ref_table:CIStr;
+    ref_column_ids:[CIStr];
+    column_ids:[CIStr];
+    on_delete:long;
+    on_update:long;
+}
+
+table MatcherInfo {
+    id:ulong;
+    name:CIStr;
+    raw:string;
+    policy_effect:ubyte;
+}
+
+table TableInfo {
+    id:ulong;
+    name:CIStr;
+    column_ids:[ulong];
+    index_ids:[ulong];
+    foreign_key_ids:[ulong];
+}
+
+table DBInfo {
+    id:ulong;
+    name:CIStr;
+    table_ids:[ulong];
+    matcher_ids:[ulong];
+}
+
+root_type ColumnInfo;
+root_type IndexInfo;
+root_type FKInfo;
+root_type MatcherInfo;
+root_type TableInfo;
