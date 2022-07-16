@@ -15,6 +15,7 @@
 package meta
 
 import (
+	"encoding/binary"
 	"errors"
 	"github.com/casbin-mesh/neo/pkg/neo/codec"
 	"github.com/casbin-mesh/neo/pkg/neo/index"
@@ -22,17 +23,30 @@ import (
 
 type Reader interface {
 	GetDBId(namespace string) (uint64, error)
+	GetTableId(table string) (uint64, error)
+	GetIndexId(index string) (uint64, error)
+	GetMatcherId(matcher string) (uint64, error)
+	GetColumnId(column string) (uint64, error)
 }
 
 type ReaderWriter interface {
 	Reader
 	NewDb(namespace string) (uint64, error)
+	NewTable(tableName string) (tableId uint64, err error)
+	NewIndex(indexName string) (indexId uint64, err error)
+	NewMatcher(matcher string) (matcherId uint64, err error)
+	NewColumn(column string) (columnId uint64, err error)
+
 	CommitAt(commitTs uint64) error
 	Rollback()
 }
 
 var (
-	mNextGlobalIDKey = []byte("NextGlobalID")
+	mNextGlobalIDKey        = []byte("g_NextGlobalID_db")
+	mNextGlobalTableIDKey   = []byte("g_NextGlobalID_table")
+	mNextGlobalIndexIDKey   = []byte("g_NextGlobalID_index")
+	mNextGlobalMatcherIDKey = []byte("g_NextGlobalID_matcher")
+	mNextGlobalColumnIDKey  = []byte("g_NextGlobalID_column")
 
 	ErrKeyNotExists = errors.New("key does not exists")
 	ErrUnknownType  = errors.New("unknown type")
@@ -45,6 +59,12 @@ func IsErrNotFound(err error) bool {
 
 type inMemMeta struct {
 	index.Txn[any]
+}
+
+func uint642Bytes(v uint64) [8]byte {
+	var data [8]byte
+	binary.BigEndian.PutUint64(data[:], v)
+	return data
 }
 
 func (i *inMemMeta) CommitAt(commitTs uint64) error {
@@ -79,9 +99,7 @@ func (i *inMemMeta) NextGlobalId() (uint64, error) {
 	return i.incUint64(mNextGlobalIDKey, 1)
 }
 
-func (i *inMemMeta) GetDBId(namespace string) (uint64, error) {
-
-	key := codec.MetaKey(namespace)
+func (i *inMemMeta) getMeta(key []byte) (uint64, error) {
 	value, exists := i.Get(key)
 	if exists == index.ErrKeyNotExists {
 		return 0, ErrKeyNotExists
@@ -92,8 +110,29 @@ func (i *inMemMeta) GetDBId(namespace string) (uint64, error) {
 	return 0, ErrUnknownType
 }
 
-func (i *inMemMeta) NewDb(namespace string) (uint64, error) {
-	key := codec.MetaKey(namespace)
+func (i *inMemMeta) GetDBId(namespace string) (uint64, error) {
+	return i.getMeta(codec.MetaKey(namespace))
+}
+
+func (i *inMemMeta) GetTableId(table string) (uint64, error) {
+	return i.getMeta(codec.TableKey(table))
+}
+
+func (i *inMemMeta) GetIndexId(index string) (uint64, error) {
+	return i.getMeta(codec.IndexKey(index))
+}
+
+func (i *inMemMeta) GetMatcherId(matcher string) (uint64, error) {
+	return i.getMeta(codec.MatcherKey(matcher))
+}
+
+func (i *inMemMeta) GetColumnId(column string) (uint64, error) {
+	return i.getMeta(codec.ColumnKey(column))
+}
+
+type nextIdGen func() (uint64, error)
+
+func (i *inMemMeta) newMeta(key []byte, idGen nextIdGen) (uint64, error) {
 	var nextId uint64
 
 	_, err := i.Get(key)
@@ -101,7 +140,7 @@ func (i *inMemMeta) NewDb(namespace string) (uint64, error) {
 		return 0, ErrDbExists
 	}
 
-	if nextId, err = i.NextGlobalId(); err != nil {
+	if nextId, err = idGen(); err != nil {
 		return 0, err
 	}
 
@@ -109,6 +148,34 @@ func (i *inMemMeta) NewDb(namespace string) (uint64, error) {
 		return 0, err
 	}
 	return nextId, nil
+}
+
+func (i *inMemMeta) NewColumn(column string) (columnId uint64, err error) {
+	return i.newMeta(codec.ColumnKey(column), func() (uint64, error) {
+		return i.incUint64(mNextGlobalColumnIDKey, 1)
+	})
+}
+
+func (i *inMemMeta) NewDb(namespace string) (uint64, error) {
+	return i.newMeta(codec.MetaKey(namespace), i.NextGlobalId)
+}
+
+func (i *inMemMeta) NewTable(tableName string) (tableId uint64, err error) {
+	return i.newMeta(codec.TableKey(tableName), func() (uint64, error) {
+		return i.incUint64(mNextGlobalTableIDKey, 1)
+	})
+}
+
+func (i *inMemMeta) NewIndex(indexName string) (indexId uint64, err error) {
+	return i.newMeta(codec.IndexKey(indexName), func() (uint64, error) {
+		return i.incUint64(mNextGlobalIndexIDKey, 1)
+	})
+}
+
+func (i *inMemMeta) NewMatcher(matcher string) (matcherId uint64, err error) {
+	return i.newMeta(codec.MatcherKey(matcher), func() (uint64, error) {
+		return i.incUint64(mNextGlobalMatcherIDKey, 1)
+	})
 }
 
 func NewInMemMeta(index index.Txn[any]) ReaderWriter {
