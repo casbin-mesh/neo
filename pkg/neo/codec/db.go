@@ -6,11 +6,12 @@ import (
 	flatbuffers "github.com/google/flatbuffers/go"
 )
 
-// DBInfoKey t{id}
+// DBInfoKey s_t{id}
 func DBInfoKey(dbId uint64) []byte {
-	buf := make([]byte, 0, 9)
+	buf := make([]byte, 0, 11)
+	buf = append(buf, mSchemaPrefix...)
 	buf = append(buf, databasePrefix...)
-	appendUint64(buf, dbId)
+	buf = appendUint64(buf, dbId)
 	return buf
 }
 

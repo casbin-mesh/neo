@@ -15,20 +15,20 @@
 package codec
 
 var (
-	mMetaPrefix     = []byte("m_")
-	namespacePrefix = []byte("n")
-	databasePrefix  = []byte("d")
-	matcherPrefix   = []byte("m")
-	tablePrefix     = []byte("t")
-	columnPrefix    = []byte("c")
-	indexPrefix     = []byte("i")
-	mMetaPrefixLen  = 3
+	mMetaPrefix     = []byte("m")
+	mSchemaPrefix   = []byte("s")
+	namespacePrefix = []byte("_n")
+	matcherPrefix   = []byte("_m")
+	tablePrefix     = []byte("_t")
+	columnPrefix    = []byte("_c")
+	indexPrefix     = []byte("_i")
+	databasePrefix  = []byte("_d")
 )
 
 // MetaKey
 // key: m_n{namespace}
 func MetaKey(namespace string) []byte {
-	buf := make([]byte, 0, mMetaPrefixLen+len(namespace))
+	buf := make([]byte, 0, len(mMetaPrefix)+len(namespacePrefix)+len(namespace))
 	buf = append(buf, mMetaPrefix...)
 	buf = append(buf, namespacePrefix...)
 	buf = append(buf, namespace...)
@@ -36,40 +36,48 @@ func MetaKey(namespace string) []byte {
 }
 
 //ColumnKey
-// key: m_c{tableName}
-func ColumnKey(columnName string) []byte {
-	buf := make([]byte, 0, mMetaPrefixLen+len(columnName))
+// key: m_t{tid}_c{tableName}
+func ColumnKey(tid uint64, columnName string) []byte {
+	buf := make([]byte, 0, len(columnName)+len(mMetaPrefix)+len(tablePrefix)+len(columnPrefix)+8)
 	buf = append(buf, mMetaPrefix...)
+	buf = append(buf, tablePrefix...)
+	buf = appendUint64(buf, tid)
 	buf = append(buf, columnPrefix...)
 	buf = append(buf, columnName...)
 	return buf
 }
 
 // TableKey
-// key: m_t{tableName}
-func TableKey(tableName string) []byte {
-	buf := make([]byte, 0, mMetaPrefixLen+len(tableName))
+// key: m_d{did}_t{tableName}
+func TableKey(did uint64, tableName string) []byte {
+	buf := make([]byte, 0, len(tableName)+len(mMetaPrefix)+len(databasePrefix)+len(tablePrefix)+8)
 	buf = append(buf, mMetaPrefix...)
+	buf = append(buf, databasePrefix...)
+	buf = appendUint64(buf, did)
 	buf = append(buf, tablePrefix...)
 	buf = append(buf, tableName...)
 	return buf
 }
 
 // IndexKey
-// key: m_i{indexName}
-func IndexKey(indexName string) []byte {
-	buf := make([]byte, 0, mMetaPrefixLen+len(indexName))
+// key: m_t{tid}_i{indexName}
+func IndexKey(tid uint64, indexName string) []byte {
+	buf := make([]byte, 0, len(indexName)+len(mMetaPrefix)+len(tablePrefix)+len(indexPrefix)+8)
 	buf = append(buf, mMetaPrefix...)
+	buf = append(buf, tablePrefix...)
+	buf = appendUint64(buf, tid)
 	buf = append(buf, indexPrefix...)
 	buf = append(buf, indexName...)
 	return buf
 }
 
 // MatcherKey
-// key: m_m{matcher}
-func MatcherKey(matcherName string) []byte {
-	buf := make([]byte, 0, mMetaPrefixLen+len(matcherName))
+// key: m_d{did}_m{matcher}
+func MatcherKey(did uint64, matcherName string) []byte {
+	buf := make([]byte, 0, len(matcherName)+len(mMetaPrefix)+len(databasePrefix)+len(matcherPrefix)+8)
 	buf = append(buf, mMetaPrefix...)
+	buf = append(buf, databasePrefix...)
+	buf = appendUint64(buf, did)
 	buf = append(buf, matcherPrefix...)
 	buf = append(buf, matcherName...)
 	return buf
