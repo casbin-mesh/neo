@@ -15,13 +15,62 @@
 package codec
 
 var (
-	mMetaPrefix    = []byte("m_")
-	mMetaPrefixLen = 2
+	mMetaPrefix     = []byte("m_")
+	namespacePrefix = []byte("n")
+	databasePrefix  = []byte("d")
+	matcherPrefix   = []byte("m")
+	tablePrefix     = []byte("t")
+	columnPrefix    = []byte("c")
+	indexPrefix     = []byte("i")
+	mMetaPrefixLen  = 3
 )
 
+// MetaKey
+// key: m_n{namespace}
 func MetaKey(namespace string) []byte {
-	key := make([]byte, mMetaPrefixLen+len(namespace))
-	w := copy(key, mMetaPrefix)
-	copy(key[w:], namespace)
-	return key
+	buf := make([]byte, 0, mMetaPrefixLen+len(namespace))
+	buf = append(buf, mMetaPrefix...)
+	buf = append(buf, namespacePrefix...)
+	buf = append(buf, namespace...)
+	return buf
+}
+
+//ColumnKey
+// key: m_c{tableName}
+func ColumnKey(columnName string) []byte {
+	buf := make([]byte, 0, mMetaPrefixLen+len(columnName))
+	buf = append(buf, mMetaPrefix...)
+	buf = append(buf, columnPrefix...)
+	buf = append(buf, columnName...)
+	return buf
+}
+
+// TableKey
+// key: m_t{tableName}
+func TableKey(tableName string) []byte {
+	buf := make([]byte, 0, mMetaPrefixLen+len(tableName))
+	buf = append(buf, mMetaPrefix...)
+	buf = append(buf, tablePrefix...)
+	buf = append(buf, tableName...)
+	return buf
+}
+
+// IndexKey
+// key: m_i{indexName}
+func IndexKey(indexName string) []byte {
+	buf := make([]byte, 0, mMetaPrefixLen+len(indexName))
+	buf = append(buf, mMetaPrefix...)
+	buf = append(buf, indexPrefix...)
+	buf = append(buf, indexName...)
+	return buf
+}
+
+// MatcherKey
+// key: m_m{matcher}
+func MatcherKey(matcherName string) []byte {
+	buf := make([]byte, 0, mMetaPrefixLen+len(matcherName))
+	buf = append(buf, mMetaPrefix...)
+	buf = append(buf, matcherPrefix...)
+	buf = append(buf, matcherName...)
+	return buf
 }
