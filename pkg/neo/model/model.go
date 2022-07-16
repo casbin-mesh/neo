@@ -57,9 +57,10 @@ type TableInfo struct {
 }
 
 type MatcherInfo struct {
-	ID   uint64
-	Name CIStr
-	Raw  string
+	ID           uint64
+	Name         CIStr
+	Raw          string
+	EffectPolicy byte
 }
 
 type DBInfo struct {
