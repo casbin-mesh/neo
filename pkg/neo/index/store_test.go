@@ -24,7 +24,7 @@ func TestNew(t *testing.T) {
 	assert.NotNil(t, s)
 }
 
-func setHelper[T any](t *testing.T, txn *txn[T], key string, value T) {
+func setHelper[T any](t *testing.T, txn Txn[T], key string, value T) {
 	assert.Nil(t, txn.Set([]byte(key), value))
 }
 

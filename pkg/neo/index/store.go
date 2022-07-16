@@ -19,6 +19,10 @@ import (
 	"sync/atomic"
 )
 
+type Index[T any] interface {
+	NewTransactionAt(readTs uint64, update bool) Txn[T]
+}
+
 type backend[T any] struct {
 	// root storage backend,
 	//
@@ -34,7 +38,7 @@ type backend[T any] struct {
 type Options struct {
 }
 
-func New[T any](opts Options) *backend[T] {
+func New[T any](opts Options) Index[T] {
 	return &backend[T]{
 		root: &art.Tree[*VersionChainHead[T]]{},
 	}
@@ -48,7 +52,7 @@ func (s *backend[T]) decRef() {
 	atomic.AddUint64(&s.txnCnt, ^uint64(1))
 }
 
-func (s *backend[T]) NewTransactionAt(readTs uint64, update bool) *txn[T] {
+func (s *backend[T]) NewTransactionAt(readTs uint64, update bool) Txn[T] {
 	s.incRef()
 	return &txn[T]{
 		pendingWrites: make(map[string]*Value[T]),
