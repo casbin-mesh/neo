@@ -1,17 +1,16 @@
 package index
 
-import "sync"
+import (
+	"sync"
+)
+import "github.com/casbin-mesh/neo/pkg/storage/mem/index/art"
 
-type indirectLayer[T any] struct {
-	table      map[string]Value[T]
-	sync.Mutex //to avoid datarace
+type mapper[T any] struct {
+	treeLeaf  art.LEAF[T]
+	chainHead VersionChainHead[T]
 }
 
-func (il *indirectLayer[T]) add_into_indirLayer(str string, val Value[T]) {
-	oldVal, ok := il.table[str]
-	if ok {
-		val.next = &oldVal
-	} else {
-		il.table[str] = val
-	}
+type indirectLayer[T any] struct {
+	table      []mapper[T]
+	sync.Mutex //to avoid datarace
 }

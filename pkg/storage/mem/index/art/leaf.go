@@ -19,6 +19,10 @@ import (
 	"fmt"
 )
 
+type LEAF[T any] struct {
+	lf leaf[T]
+}
+
 type leaf[T any] struct {
 	key   Key
 	value T

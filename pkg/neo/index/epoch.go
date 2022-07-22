@@ -3,8 +3,8 @@ package index
 import "sync"
 
 type epoch[T any] struct {
-	txns          []txn
-	txnsWriteSet  []Value
+	txns          []txn[T]
+	txnsWriteSet  []T
 	activeTxnsCnt uint64
 	startTS       uint64
 	endTS         uint64
@@ -12,21 +12,21 @@ type epoch[T any] struct {
 }
 
 type epochManager[T any] struct {
-	currentEpoch      epoch
-	epoches           []epoch
-	last_active_epoch *epoch
+	currentEpoch      epoch[T]
+	epoches           []epoch[T]
+	last_active_epoch *epoch[T]
 	sync.Mutex        //to avoid datarace
 }
 
-func (em *epochManager) add_into_epoch(t txn) {
+func (em *epochManager[T]) add_into_epoch(t txn[T]) {
 	em.Lock()
 	defer em.Unlock()
 	em.currentEpoch.txns = append(em.currentEpoch.txns, t)
 	em.currentEpoch.activeTxnsCnt++
 }
 
-func (em *epochManager) new_epoch() epoch {
-	newEp := epoch{
+func (em *epochManager[T]) new_epoch() epoch[T] {
+	newEp := epoch[T]{
 		activeTxnsCnt: 0,
 	}
 	em.epoches = append(em.epoches, newEp)

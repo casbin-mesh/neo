@@ -7,6 +7,12 @@ type TSController struct {
 	sync.Mutex //to protect nextTxnTS from datarace
 }
 
+func (TSC *TSController) TS_init() {
+	TSC.Lock()
+	defer TSC.Unlock()
+	TSC.nextTxnTS = 1
+}
+
 func (TSC *TSController) get_TS() uint64 {
 	TSC.Lock()
 	defer TSC.Unlock()
