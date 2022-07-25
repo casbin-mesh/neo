@@ -20,12 +20,14 @@ import (
 )
 
 type LEAF[T any] struct {
-	lf leaf[T]
+	lf                 *leaf[T]
+	version_chain_head interface{} //todo: it should points to type index.Mapper, but in this package here is a rename
 }
 
 type leaf[T any] struct {
-	key   Key
-	value T
+	key         Key
+	value       T
+	logical_ptr *LEAF[T]
 }
 
 func (l leaf[T]) Kind() Kind {

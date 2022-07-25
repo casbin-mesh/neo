@@ -13,6 +13,12 @@ type checkpoint[T any] struct {
 	prev *checkpoint[T]
 }
 
+//to expose to other package
+type Iterator[T any] struct {
+	Itr  *iterator[T]
+	Tree *Tree[T]
+}
+
 // iterator will scan the tree in lexicographic order.
 type iterator[T any] struct {
 	tree *Tree[T]

@@ -4,7 +4,7 @@ import "sync"
 
 type epoch[T any] struct {
 	txns          []txn[T]
-	txnsWriteSet  []T
+	txnsWriteSet  []Value[T]
 	activeTxnsCnt uint64
 	startTS       uint64
 	endTS         uint64
@@ -12,7 +12,7 @@ type epoch[T any] struct {
 }
 
 type epochManager[T any] struct {
-	currentEpoch      epoch[T]
+	currentEpoch      *epoch[T]
 	epoches           []epoch[T]
 	last_active_epoch *epoch[T]
 	sync.Mutex        //to avoid datarace
