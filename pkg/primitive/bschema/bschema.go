@@ -4,17 +4,30 @@ import (
 	"github.com/casbin-mesh/neo/pkg/primitive/bsontype"
 )
 
+type BSchema interface {
+	Key() []byte
+	// ValueCopy returns a copy of the value of the item from the value bytes, writing it to dst slice.
+	// If nil is passed, or capacity of dst isn't sufficient, a new slice would be allocated and
+	// returned.
+	ValueCopy(bytes []byte) ([]byte, error)
+}
+
 type ReaderWriter interface {
 	Writer
 	Reader
 }
 
 type Writer interface {
+	Append(typ bsontype.Type, name []byte)
 	EncodeVal() []byte
 	EncodeKey() []byte
 }
 
 type Reader interface {
+	Namespace() []byte
+	FieldAt(pos int) Field
+	FieldsLen() int
+
 	DecodeVal(src []byte)
 	DecodeKey(src []byte)
 }
