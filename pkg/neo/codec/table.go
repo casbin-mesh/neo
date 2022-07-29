@@ -24,7 +24,7 @@ import (
 func TableInfoKey(tableId uint64) []byte {
 	buf := make([]byte, 0, 11)
 	buf = append(buf, mSchemaPrefix...)
-	buf = append(buf, tablePrefix...)
+	buf = append(buf, tablePrefixSep...)
 	buf = appendUint64(buf, tableId)
 	return buf
 }

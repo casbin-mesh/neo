@@ -15,22 +15,25 @@
 package codec
 
 var (
-	mMetaPrefix     = []byte("m")
-	mSchemaPrefix   = []byte("s")
-	namespacePrefix = []byte("_n")
-	matcherPrefix   = []byte("_m")
-	tablePrefix     = []byte("_t")
-	columnPrefix    = []byte("_c")
-	indexPrefix     = []byte("_i")
-	databasePrefix  = []byte("_d")
+	mMetaPrefix   = []byte("m")
+	mSchemaPrefix = []byte("s")
+	tablePrefix   = []byte("t")
+
+	namespacePrefixSep = []byte("_n")
+	matcherPrefixSep   = []byte("_m")
+	tablePrefixSep     = []byte("_t")
+	tupleRecordPrefix  = []byte("_r")
+	columnPrefixSep    = []byte("_c")
+	indexPrefixSep     = []byte("_i")
+	databasePrefixSep  = []byte("_d")
 )
 
 // MetaKey
 // key: m_n{namespace}
 func MetaKey(namespace string) []byte {
-	buf := make([]byte, 0, len(mMetaPrefix)+len(namespacePrefix)+len(namespace))
+	buf := make([]byte, 0, len(mMetaPrefix)+len(namespacePrefixSep)+len(namespace))
 	buf = append(buf, mMetaPrefix...)
-	buf = append(buf, namespacePrefix...)
+	buf = append(buf, namespacePrefixSep...)
 	buf = append(buf, namespace...)
 	return buf
 }
@@ -38,11 +41,11 @@ func MetaKey(namespace string) []byte {
 //ColumnKey
 // key: m_t{tid}_c{tableName}
 func ColumnKey(tid uint64, columnName string) []byte {
-	buf := make([]byte, 0, len(columnName)+len(mMetaPrefix)+len(tablePrefix)+len(columnPrefix)+8)
+	buf := make([]byte, 0, len(columnName)+len(mMetaPrefix)+len(tablePrefixSep)+len(columnPrefixSep)+8)
 	buf = append(buf, mMetaPrefix...)
-	buf = append(buf, tablePrefix...)
+	buf = append(buf, tablePrefixSep...)
 	buf = appendUint64(buf, tid)
-	buf = append(buf, columnPrefix...)
+	buf = append(buf, columnPrefixSep...)
 	buf = append(buf, columnName...)
 	return buf
 }
@@ -50,11 +53,11 @@ func ColumnKey(tid uint64, columnName string) []byte {
 // TableKey
 // key: m_d{did}_t{tableName}
 func TableKey(did uint64, tableName string) []byte {
-	buf := make([]byte, 0, len(tableName)+len(mMetaPrefix)+len(databasePrefix)+len(tablePrefix)+8)
+	buf := make([]byte, 0, len(tableName)+len(mMetaPrefix)+len(databasePrefixSep)+len(tablePrefixSep)+8)
 	buf = append(buf, mMetaPrefix...)
-	buf = append(buf, databasePrefix...)
+	buf = append(buf, databasePrefixSep...)
 	buf = appendUint64(buf, did)
-	buf = append(buf, tablePrefix...)
+	buf = append(buf, tablePrefixSep...)
 	buf = append(buf, tableName...)
 	return buf
 }
@@ -62,11 +65,11 @@ func TableKey(did uint64, tableName string) []byte {
 // IndexKey
 // key: m_t{tid}_i{indexName}
 func IndexKey(tid uint64, indexName string) []byte {
-	buf := make([]byte, 0, len(indexName)+len(mMetaPrefix)+len(tablePrefix)+len(indexPrefix)+8)
+	buf := make([]byte, 0, len(indexName)+len(mMetaPrefix)+len(tablePrefixSep)+len(indexPrefixSep)+8)
 	buf = append(buf, mMetaPrefix...)
-	buf = append(buf, tablePrefix...)
+	buf = append(buf, tablePrefixSep...)
 	buf = appendUint64(buf, tid)
-	buf = append(buf, indexPrefix...)
+	buf = append(buf, indexPrefixSep...)
 	buf = append(buf, indexName...)
 	return buf
 }
@@ -74,11 +77,11 @@ func IndexKey(tid uint64, indexName string) []byte {
 // MatcherKey
 // key: m_d{did}_m{matcher}
 func MatcherKey(did uint64, matcherName string) []byte {
-	buf := make([]byte, 0, len(matcherName)+len(mMetaPrefix)+len(databasePrefix)+len(matcherPrefix)+8)
+	buf := make([]byte, 0, len(matcherName)+len(mMetaPrefix)+len(databasePrefixSep)+len(matcherPrefixSep)+8)
 	buf = append(buf, mMetaPrefix...)
-	buf = append(buf, databasePrefix...)
+	buf = append(buf, databasePrefixSep...)
 	buf = appendUint64(buf, did)
-	buf = append(buf, matcherPrefix...)
+	buf = append(buf, matcherPrefixSep...)
 	buf = append(buf, matcherName...)
 	return buf
 }
