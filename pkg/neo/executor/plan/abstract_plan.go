@@ -1,4 +1,4 @@
-package plans
+package plan
 
 import "github.com/casbin-mesh/neo/pkg/primitive/bschema"
 

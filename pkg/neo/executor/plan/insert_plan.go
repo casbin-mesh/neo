@@ -1,20 +1,25 @@
-package plans
+package plan
 
 import "github.com/casbin-mesh/neo/pkg/primitive/btuple"
 
 type InsertPlan interface {
 	AbstractPlan
-	RawValues() []btuple.Reader
+	RawValues() []btuple.Builder
+	RawValuesSize() int
 	TableOid() uint64
 }
 
 type insertPlan struct {
 	AbstractPlan
-	rawValues []btuple.Reader
+	rawValues []btuple.Builder
 	tableOid  uint64
 }
 
-func (i insertPlan) RawValues() []btuple.Reader {
+func (i insertPlan) RawValuesSize() int {
+	return len(i.rawValues)
+}
+
+func (i insertPlan) RawValues() []btuple.Builder {
 	return i.rawValues
 }
 
@@ -26,7 +31,7 @@ func (i insertPlan) GetType() PlanType {
 	return InsertPlanType
 }
 
-func NewRawInsertPlan(rawValues []btuple.Reader, tableOid uint64) InsertPlan {
+func NewRawInsertPlan(rawValues []btuple.Builder, tableOid uint64) InsertPlan {
 	return &insertPlan{
 		AbstractPlan: NewAbstractPlan(nil, nil),
 		rawValues:    rawValues,
