@@ -10,7 +10,7 @@ import (
 func DBInfoKey(dbId uint64) []byte {
 	buf := make([]byte, 0, 11)
 	buf = append(buf, mSchemaPrefix...)
-	buf = append(buf, databasePrefix...)
+	buf = append(buf, databasePrefixSep...)
 	buf = appendUint64(buf, dbId)
 	return buf
 }

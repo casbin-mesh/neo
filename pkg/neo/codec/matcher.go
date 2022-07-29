@@ -24,7 +24,7 @@ import (
 func MatcherInfoKey(matcherId uint64) []byte {
 	buf := make([]byte, 0, 11)
 	buf = append(buf, mSchemaPrefix...)
-	buf = append(buf, matcherPrefix...)
+	buf = append(buf, matcherPrefixSep...)
 	buf = appendUint64(buf, matcherId)
 	return buf
 }
