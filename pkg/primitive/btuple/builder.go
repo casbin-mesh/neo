@@ -21,6 +21,7 @@ import (
 )
 
 type Builder interface {
+	Reader
 	Append(...Elem)
 	Encode() []byte
 	Write([]byte) (int, error)
@@ -32,6 +33,14 @@ type builder struct {
 	elems     []Elem
 	offset    []uint32
 	len       int
+}
+
+func (b *builder) ValueAt(pos int) Elem {
+	return b.elems[pos]
+}
+
+func (b *builder) Occupied(pos int) bool {
+	return pos >= 0 && pos < len(b.elems)
 }
 
 // Reset resets all fields excludes BTupleType
