@@ -22,7 +22,7 @@ import (
 type Reader interface {
 	ValueAt(pos int) Elem
 	Occupied(pos int) bool
-	buildHint() error
+	Encode() []byte
 }
 
 type mapping struct {
@@ -34,6 +34,10 @@ type bufferedReader struct {
 	raw []byte
 	len int
 	mt  map[int]mapping
+}
+
+func (b *bufferedReader) Encode() []byte {
+	return b.raw
 }
 
 func (b *bufferedReader) buildHint() error {
