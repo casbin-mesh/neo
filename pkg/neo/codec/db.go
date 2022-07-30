@@ -25,17 +25,12 @@ func EncodeDBInfo(info *model.DBInfo) []byte {
 	fb.CIStrAddO(builder, OName)
 	name := fb.CIStrEnd(builder)
 
-	fb.DBInfoStart(builder)
-	fb.DBInfoAddId(builder, info.ID)
-	fb.DBInfoAddName(builder, name)
-
 	// matcherIds
 	fb.DBInfoStartMatcherIdsVector(builder, len(info.MatcherInfo))
 	for _, matcher := range info.MatcherInfo {
 		builder.PrependUint64(matcher.ID)
 	}
 	matcherIds := builder.EndVector(len(info.MatcherInfo))
-	fb.DBInfoAddMatcherIds(builder, matcherIds)
 
 	// tableIds
 	fb.DBInfoStartTableIdsVector(builder, len(info.TableInfo))
@@ -43,6 +38,11 @@ func EncodeDBInfo(info *model.DBInfo) []byte {
 		builder.PrependUint64(table.ID)
 	}
 	tableIds := builder.EndVector(len(info.MatcherInfo))
+
+	fb.DBInfoStart(builder)
+	fb.DBInfoAddId(builder, info.ID)
+	fb.DBInfoAddName(builder, name)
+	fb.DBInfoAddMatcherIds(builder, matcherIds)
 	fb.DBInfoAddMatcherIds(builder, tableIds)
 	fb.DBInfoAddTableIds(builder, tableIds)
 
