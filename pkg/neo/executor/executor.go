@@ -9,7 +9,7 @@ import (
 
 type Executor interface {
 	Init()
-	Next(tuple *btuple.Reader, rid *primitive.ObjectID) (bool, error)
+	Next(tuple *btuple.Modifier, rid *primitive.ObjectID) (bool, error)
 }
 
 type baseExecutor struct {

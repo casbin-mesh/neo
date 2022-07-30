@@ -25,7 +25,7 @@ func (i *insertExecutor) Init() {
 	}
 }
 
-func (i *insertExecutor) Next(tuple *btuple.Reader, rid *primitive.ObjectID) (next bool, err error) {
+func (i *insertExecutor) Next(tuple *btuple.Modifier, rid *primitive.ObjectID) (next bool, err error) {
 	if i.insertPlan.HasChildren() {
 		if next, err = i.childExecutor.Next(tuple, rid); !next || err != nil { // occurs error or no more tuple
 			return
@@ -39,8 +39,12 @@ func (i *insertExecutor) Next(tuple *btuple.Reader, rid *primitive.ObjectID) (ne
 	}
 
 	*rid = primitive.NewObjectID()
-
-	if err = i.GetTxn().Set(codec.TupleRecordKey(i.tableInfo.ID, *rid), (*tuple).Encode()); err != nil {
+	if err = i.GetTxn().Set(
+		codec.TupleRecordKey(i.tableInfo.ID, *rid),
+		btuple.NewTupleBuilder(
+			btuple.SmallValueType, (*tuple).Values()...,
+		).Encode(),
+	); err != nil {
 		return
 	}
 
