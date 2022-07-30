@@ -16,6 +16,7 @@ package badgerAdapter
 
 import (
 	"github.com/casbin-mesh/neo/pkg/db"
+	adapter2 "github.com/casbin-mesh/neo/pkg/db/adapter"
 	"github.com/dgraph-io/badger/v3"
 )
 
@@ -26,6 +27,14 @@ type adapter struct {
 type txn struct {
 	txn    *badger.Txn
 	readTs uint64
+}
+
+type iter struct {
+	*badger.Iterator
+}
+
+func (i *iter) Item() db.Item {
+	return i.Iterator.Item()
 }
 
 func (t txn) CommitAt(commitTs uint64, callback func(error)) error {
@@ -50,6 +59,32 @@ func (t txn) Set(k []byte, v []byte) error {
 
 func (t txn) Delete(k []byte) error {
 	return t.txn.Delete(k)
+}
+
+func (t txn) NewKeyIterator(key []byte, iterOpt adapter2.IteratorOptions) db.Iterator {
+	i := t.txn.NewKeyIterator(key, badger.IteratorOptions{
+		PrefetchSize:   iterOpt.PrefetchSize,
+		PrefetchValues: iterOpt.PrefetchValues,
+		Reverse:        iterOpt.Reverse,
+		AllVersions:    iterOpt.AllVersions,
+		InternalAccess: iterOpt.InternalAccess,
+		Prefix:         iterOpt.Prefix,
+		SinceTs:        iterOpt.SinceTs,
+	})
+	return &iter{Iterator: i}
+}
+
+func (t txn) NewIterator(iterOpt adapter2.IteratorOptions) db.Iterator {
+	i := t.txn.NewIterator(badger.IteratorOptions{
+		PrefetchSize:   iterOpt.PrefetchSize,
+		PrefetchValues: iterOpt.PrefetchValues,
+		Reverse:        iterOpt.Reverse,
+		AllVersions:    iterOpt.AllVersions,
+		InternalAccess: iterOpt.InternalAccess,
+		Prefix:         iterOpt.Prefix,
+		SinceTs:        iterOpt.SinceTs,
+	})
+	return &iter{Iterator: i}
 }
 
 func (t txn) Get(k []byte) (db.Item, error) {
