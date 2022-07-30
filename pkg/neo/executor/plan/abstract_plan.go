@@ -8,6 +8,7 @@ const (
 	InsertPlanType PlanType = iota + 1
 	UpdatePlanType
 	SeqScanPlanType
+	CreateDBPlanType
 )
 
 type Plan interface {

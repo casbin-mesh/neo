@@ -2,16 +2,9 @@ package executor
 
 import (
 	"context"
-	"github.com/casbin-mesh/neo/pkg/db"
-	badgerAdapter "github.com/casbin-mesh/neo/pkg/db/adapter/badger"
-	"github.com/casbin-mesh/neo/pkg/neo/index"
-	"github.com/casbin-mesh/neo/pkg/neo/meta"
+	"github.com/casbin-mesh/neo/pkg/neo/executor/plan"
 	"github.com/casbin-mesh/neo/pkg/neo/model"
-	"github.com/casbin-mesh/neo/pkg/neo/schema"
 	"github.com/casbin-mesh/neo/pkg/neo/session"
-	"github.com/dgraph-io/badger/v3"
-	"github.com/dgraph-io/badger/v3/y"
-	"github.com/dgraph-io/ristretto/z"
 	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
@@ -28,47 +21,6 @@ e = some(where (p.eft == allow))
 
 [matchers]
 m = r.sub == p.sub && r.obj == p.obj && r.act == p.act`
-
-type mockDB struct {
-	db        db.DB
-	metaIndex index.Index[any]
-	infoIndex index.Index[*model.DBInfo]
-	txnMark   y.WaterMark
-	closer    *z.Closer
-}
-
-func (db *mockDB) NewTxnAt(readTs uint64, update bool) session.Context {
-	txn := db.db.NewTransactionAt(readTs, update)
-	metaTxn := db.metaIndex.NewTransactionAt(readTs, update)
-	infoTxn := db.infoIndex.NewTransactionAt(readTs, update)
-	return session.NewSessionCtx(txn, meta.NewInMemMeta(metaTxn), schema.New(infoTxn), &db.txnMark)
-}
-
-func (db *mockDB) Close() error {
-	db.closer.SignalAndWait()
-	return db.db.Close()
-}
-
-func OpenMockDB(t *testing.T, path string) *mockDB {
-	db, err := badgerAdapter.OpenManaged(badger.DefaultOptions(path))
-	assert.Nil(t, err)
-	metaIndex := index.New[any](index.Options{})
-	infoIndex := index.New[*model.DBInfo](index.Options{})
-	closer := z.NewCloser(1)
-	mark := y.WaterMark{}
-	mark.Init(closer)
-	return &mockDB{
-		db:        db,
-		metaIndex: metaIndex,
-		infoIndex: infoIndex,
-		txnMark:   mark,
-		closer:    closer,
-	}
-}
-
-func (db *mockDB) WaitForMark(ctx context.Context, ts uint64) error {
-	return db.txnMark.WaitForMark(ctx, ts)
-}
 
 type asserter struct {
 	dbs       []*model.DBInfo
@@ -137,7 +89,7 @@ func (a *asserter) Check(t *testing.T, sc session.Context) {
 				assert.Equal(t, indexInfo.ID, id)
 			}
 			for _, column := range tableInfo.Columns {
-				id, err = meta.GetColumnId(tableInfo.ID, column.Name.L)
+				id, err = meta.GetColumnId(tableInfo.ID, column.ColName.L)
 				assert.Nil(t, err)
 				assert.Equal(t, column.ID, id)
 			}
@@ -171,28 +123,28 @@ func TestSchemaExec_CreateDatabase(t *testing.T) {
 				Columns: []*model.ColumnInfo{
 					{
 						// ID: 1,
-						Name: model.CIStr{
+						ColName: model.CIStr{
 							O: "subject",
 							L: "subject",
 						},
 					},
 					{
 						// ID: 2,
-						Name: model.CIStr{
+						ColName: model.CIStr{
 							O: "object",
 							L: "object",
 						},
 					},
 					{
 						// ID: 3,
-						Name: model.CIStr{
+						ColName: model.CIStr{
 							O: "action",
 							L: "action",
 						},
 					},
 					{
 						// ID: 4,
-						Name: model.CIStr{
+						ColName: model.CIStr{
 							O: "effect",
 							L: "effect",
 						},
@@ -209,21 +161,21 @@ func TestSchemaExec_CreateDatabase(t *testing.T) {
 				Columns: []*model.ColumnInfo{
 					{
 						// ID: 5,
-						Name: model.CIStr{
+						ColName: model.CIStr{
 							O: "member",
 							L: "member",
 						},
 					},
 					{
 						// ID: 6,
-						Name: model.CIStr{
+						ColName: model.CIStr{
 							O: "group",
 							L: "group",
 						},
 					},
 					{
 						// ID: 7,
-						Name: model.CIStr{
+						ColName: model.CIStr{
 							O: "domain",
 							L: "domain",
 						},
@@ -245,8 +197,9 @@ func TestSchemaExec_CreateDatabase(t *testing.T) {
 	}
 	checker := builderAsserter(info)
 
-	exec := NewSchemaExec(sc)
-	_, err := exec.createDatabase(context.TODO(), info)
+	exec := NewSchemaExec(sc, plan.NewCreateDBPlan(info))
+	exec.Init()
+	_, err := exec.Next(nil, nil)
 	assert.Nil(t, err)
 	err = sc.CommitTxn(context.TODO(), 2)
 	assert.Nil(t, err)

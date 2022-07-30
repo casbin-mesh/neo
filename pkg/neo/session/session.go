@@ -17,6 +17,7 @@ package session
 import (
 	"context"
 	"github.com/casbin-mesh/neo/pkg/db"
+	"github.com/casbin-mesh/neo/pkg/neo/catalog"
 	"github.com/casbin-mesh/neo/pkg/neo/meta"
 	"github.com/casbin-mesh/neo/pkg/neo/schema"
 	"github.com/dgraph-io/badger/v3/y"
@@ -25,6 +26,7 @@ import (
 type Context interface {
 	CommitTxn(ctx context.Context, commitTs uint64) error
 	RollbackTxn(ctx context.Context)
+	GetCatalog() catalog.Catalog
 	GetMetaReaderWriter() meta.ReaderWriter
 	GetSchemaReaderWriter() schema.ReaderWriter
 	GetTxn() db.Txn
@@ -32,6 +34,7 @@ type Context interface {
 
 type ctx struct {
 	txn     db.Txn
+	catalog catalog.Catalog
 	meta    meta.ReaderWriter
 	schema  schema.ReaderWriter
 	txnMark *y.WaterMark
@@ -39,6 +42,10 @@ type ctx struct {
 
 func (c ctx) GetSchemaReaderWriter() schema.ReaderWriter {
 	return c.schema
+}
+
+func (c ctx) GetCatalog() catalog.Catalog {
+	return c.catalog
 }
 
 func (c ctx) GetTxn() db.Txn {
@@ -71,5 +78,12 @@ func (c ctx) RollbackTxn(ctx context.Context) {
 }
 
 func NewSessionCtx(txn db.Txn, meta meta.ReaderWriter, schema schema.ReaderWriter, txnMark *y.WaterMark) Context {
-	return &ctx{txn: txn, meta: meta, schema: schema, txnMark: txnMark}
+	sessCtx := &ctx{
+		txn:     txn,
+		catalog: catalog.NewCatalog(meta, schema, txn),
+		meta:    meta,
+		schema:  schema,
+		txnMark: txnMark,
+	}
+	return sessCtx
 }
