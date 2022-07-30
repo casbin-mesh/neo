@@ -40,17 +40,12 @@ func EncodeTableInfo(info *model.TableInfo) []byte {
 	fb.CIStrAddO(builder, OName)
 	tableName := fb.CIStrEnd(builder)
 
-	fb.TableInfoStart(builder)
-	fb.TableInfoAddId(builder, info.ID)
-	fb.TableInfoAddName(builder, tableName)
-
 	// columnIds
 	fb.TableInfoStartColumnIdsVector(builder, len(info.Columns))
 	for _, column := range info.Columns {
 		builder.PrependUint64(column.ID)
 	}
 	columnIds := builder.EndVector(len(info.Columns))
-	fb.TableInfoAddColumnIds(builder, columnIds)
 
 	// indexIds
 	fb.TableInfoStartForeignKeyIdsVector(builder, len(info.Indices))
@@ -58,7 +53,6 @@ func EncodeTableInfo(info *model.TableInfo) []byte {
 		builder.PrependUint64(index.ID)
 	}
 	indexIds := builder.EndVector(len(info.Indices))
-	fb.TableInfoAddIndexIds(builder, indexIds)
 
 	// fkInfoIds
 	fb.TableInfoStartForeignKeyIdsVector(builder, len(info.ForeignKeys))
@@ -66,6 +60,12 @@ func EncodeTableInfo(info *model.TableInfo) []byte {
 		builder.PrependUint64(foreignKey.ID)
 	}
 	fkInfoIds := builder.EndVector(len(info.ForeignKeys))
+
+	fb.TableInfoStart(builder)
+	fb.TableInfoAddId(builder, info.ID)
+	fb.TableInfoAddName(builder, tableName)
+	fb.TableInfoAddColumnIds(builder, columnIds)
+	fb.TableInfoAddIndexIds(builder, indexIds)
 	fb.TableInfoAddForeignKeyIds(builder, fkInfoIds)
 	orc := fb.TableInfoEnd(builder)
 	builder.Finish(orc)
