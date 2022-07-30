@@ -35,6 +35,10 @@ type builder struct {
 	len       int
 }
 
+func (b *builder) Values() []Elem {
+	return b.elems
+}
+
 func (b *builder) ValueAt(pos int) Elem {
 	return b.elems[pos]
 }
