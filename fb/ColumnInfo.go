@@ -92,8 +92,20 @@ func (rcv *ColumnInfo) MutateDefaultValue(j int, n byte) bool {
 	return false
 }
 
+func (rcv *ColumnInfo) Tp() byte {
+	o := flatbuffers.UOffsetT(rcv._tab.Offset(10))
+	if o != 0 {
+		return rcv._tab.GetByte(o + rcv._tab.Pos)
+	}
+	return 0
+}
+
+func (rcv *ColumnInfo) MutateTp(n byte) bool {
+	return rcv._tab.MutateByteSlot(10, n)
+}
+
 func ColumnInfoStart(builder *flatbuffers.Builder) {
-	builder.StartObject(3)
+	builder.StartObject(4)
 }
 func ColumnInfoAddId(builder *flatbuffers.Builder, id uint64) {
 	builder.PrependUint64Slot(0, id, 0)
@@ -106,6 +118,9 @@ func ColumnInfoAddDefaultValue(builder *flatbuffers.Builder, defaultValue flatbu
 }
 func ColumnInfoStartDefaultValueVector(builder *flatbuffers.Builder, numElems int) flatbuffers.UOffsetT {
 	return builder.StartVector(1, numElems, 1)
+}
+func ColumnInfoAddTp(builder *flatbuffers.Builder, tp byte) {
+	builder.PrependByteSlot(3, tp, 0)
 }
 func ColumnInfoEnd(builder *flatbuffers.Builder) flatbuffers.UOffsetT {
 	return builder.EndObject()

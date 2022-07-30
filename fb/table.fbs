@@ -9,6 +9,7 @@ table ColumnInfo {
     id:ulong;
     name:CIStr;
     default_value:[ubyte];
+    tp:ubyte;
 }
 
 table IndexInfo{
