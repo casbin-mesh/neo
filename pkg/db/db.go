@@ -14,6 +14,8 @@
 
 package db
 
+import "github.com/casbin-mesh/neo/pkg/db/adapter"
+
 type Item interface {
 	// KeyCopy returns a copy of the key of the item, writing it to dst slice.
 	// If nil is passed, or capacity of dst isn't sufficient, a new slice would be allocated and
@@ -29,6 +31,15 @@ type Item interface {
 	ValueCopy(dst []byte) ([]byte, error)
 }
 
+type Iterator interface {
+	Item() Item
+	Valid() bool
+	ValidForPrefix(b []byte) bool
+	Close()
+	Next()
+	Seek(key []byte)
+}
+
 type Txn interface {
 	// CommitAt commits the transaction, following the same logic as Commit(), but
 	// at the given commit timestamp. This will panic if not used with managed transactions.
@@ -40,6 +51,8 @@ type Txn interface {
 	Set([]byte, []byte) error
 	Delete([]byte) error
 	Get([]byte) (Item, error)
+	NewKeyIterator(key []byte, iterOpt adapter.IteratorOptions) Iterator
+	NewIterator(iterOpt adapter.IteratorOptions) Iterator
 }
 
 type DB interface {
