@@ -14,6 +14,11 @@
 
 package model
 
+import (
+	"github.com/casbin-mesh/neo/pkg/primitive/bschema"
+	"github.com/casbin-mesh/neo/pkg/primitive/bsontype"
+)
+
 type Cloneable interface {
 	Clone() Cloneable
 }
@@ -26,9 +31,18 @@ type CIStr struct {
 
 type ColumnInfo struct {
 	ID              uint64
-	Name            CIStr
+	ColName         CIStr
+	Tp              bsontype.Type
 	DefaultValue    Cloneable
 	DefaultValueBit []byte
+}
+
+func (c *ColumnInfo) Name() []byte {
+	return []byte(c.ColName.L)
+}
+
+func (c *ColumnInfo) Type() bsontype.Type {
+	return c.Tp
 }
 
 type IndexType uint8
@@ -102,6 +116,14 @@ func (t *TableInfo) Clone() *TableInfo {
 		nt.ForeignKeys[i] = key.Clone()
 	}
 	return &nt
+}
+
+func (t *TableInfo) FieldAt(pos int) bschema.Field {
+	return t.Columns[pos]
+}
+
+func (t *TableInfo) FieldsLen() int {
+	return len(t.Columns)
 }
 
 func (c *ColumnInfo) Clone() *ColumnInfo {
