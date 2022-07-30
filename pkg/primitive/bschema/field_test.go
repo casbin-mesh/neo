@@ -20,7 +20,7 @@ import (
 )
 
 func TestField_Encode(t *testing.T) {
-	f := Field{
+	f := field{
 		name: []byte("Hello World!"),
 		typ:  1,
 	}
@@ -29,14 +29,14 @@ func TestField_Encode(t *testing.T) {
 }
 
 func TestField_Decode(t *testing.T) {
-	f := Field{
+	f := field{
 		name: []byte("Hello World!"),
 		typ:  1,
 	}
 	dst := f.Encode()
 	assert.NotNil(t, dst)
 
-	decode := Field{}
+	decode := field{}
 	decode.Decode(dst)
 	assert.Equal(t, f, decode)
 }

@@ -24,19 +24,19 @@ type Writer interface {
 }
 
 type Reader interface {
-	Namespace() []byte
+	//Namespace() []byte
 	FieldAt(pos int) Field
 	FieldsLen() int
 
-	DecodeVal(src []byte)
-	DecodeKey(src []byte)
+	//DecodeVal(src []byte)
+	//DecodeKey(src []byte)
 }
 
 // readerWriter represents a bschema of a model, managing a table.
 type readerWriter struct {
 	name      []byte
 	namespace []byte
-	fields    []Field
+	fields    []*field
 	valLen    int
 }
 
@@ -45,7 +45,7 @@ func NewReaderWriter(namespace, name []byte) ReaderWriter {
 }
 
 func (bs *readerWriter) Append(typ bsontype.Type, name []byte) {
-	bs.fields = append(bs.fields, Field{
+	bs.fields = append(bs.fields, &field{
 		name: name,
 		typ:  typ,
 	})
@@ -85,9 +85,9 @@ func (bs *readerWriter) DecodeVal(src []byte) {
 	lastIdx := 0
 	for i := 0; i < len(src); i++ {
 		if src[i] == 0 {
-			f := Field{}
+			f := field{}
 			f.Decode(src[lastIdx:i])
-			bs.fields = append(bs.fields, f)
+			bs.fields = append(bs.fields, &f)
 			lastIdx = i
 		}
 	}

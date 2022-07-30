@@ -2,35 +2,40 @@ package bschema
 
 import "github.com/casbin-mesh/neo/pkg/primitive/bsontype"
 
-type Field struct {
+type Field interface {
+	Type() bsontype.Type
+	Name() []byte
+}
+
+type field struct {
 	name []byte
 	typ  bsontype.Type
 }
 
-func (f *Field) Type() bsontype.Type {
+func (f *field) Type() bsontype.Type {
 	return f.typ
 }
 
-func (f *Field) Name() []byte {
+func (f *field) Name() []byte {
 	return f.name
 }
 
 // Encode into binary format.
 //
 // | typ bsontype.Type |  name []byte |
-func (f *Field) Encode() []byte {
+func (f *field) Encode() []byte {
 	dst := make([]byte, f.len())
 	dst[0] = byte(f.typ)
 	copy(dst[1:], f.name)
 	return dst
 }
 
-func (f *Field) len() int {
+func (f *field) len() int {
 	return len(f.name) + 1 // 1 byte for type
 }
 
 // Decode from bytes
-func (f *Field) Decode(src []byte) {
+func (f *field) Decode(src []byte) {
 	f.typ = bsontype.Type(src[0])
 	//TODO(weny): should we clone the src here?
 	f.name = make([]byte, len(src)-1)
