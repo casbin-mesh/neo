@@ -1,6 +1,7 @@
 package executor
 
 import (
+	"context"
 	"github.com/casbin-mesh/neo/pkg/db"
 	"github.com/casbin-mesh/neo/pkg/neo/session"
 	"github.com/casbin-mesh/neo/pkg/primitive"
@@ -9,7 +10,7 @@ import (
 
 type Executor interface {
 	Init()
-	Next(tuple *btuple.Modifier, rid *primitive.ObjectID) (bool, error)
+	Next(ctx context.Context, tuple *btuple.Modifier, rid *primitive.ObjectID) (bool, error)
 }
 
 type baseExecutor struct {
@@ -26,4 +27,30 @@ func (b *baseExecutor) GetTxn() db.Txn {
 
 func newBaseExecutor(ctx session.Context) baseExecutor {
 	return baseExecutor{ctx: ctx}
+}
+
+func Execute(executor Executor, ctx context.Context) (result []btuple.Modifier, ids []primitive.ObjectID, err error) {
+	executor.Init()
+
+	var (
+		next bool
+	)
+	for {
+		var (
+			tuple btuple.Modifier
+			rid   primitive.ObjectID
+		)
+		if next, err = executor.Next(ctx, &tuple, &rid); err != nil {
+			return
+		}
+		if !next {
+			break
+		}
+		if tuple != nil {
+			result = append(result, tuple)
+			ids = append(ids, rid)
+		}
+
+	}
+	return
 }

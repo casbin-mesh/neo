@@ -6,12 +6,14 @@ type InsertPlan interface {
 	AbstractPlan
 	RawValues() []btuple.Modifier
 	RawValuesSize() int
+	DBOid() uint64
 	TableOid() uint64
 }
 
 type insertPlan struct {
 	AbstractPlan
 	rawValues []btuple.Modifier
+	dbOid     uint64
 	tableOid  uint64
 }
 
@@ -27,21 +29,27 @@ func (i insertPlan) TableOid() uint64 {
 	return i.tableOid
 }
 
+func (i insertPlan) DBOid() uint64 {
+	return i.dbOid
+}
+
 func (i insertPlan) GetType() PlanType {
 	return InsertPlanType
 }
 
-func NewRawInsertPlan(rawValues []btuple.Modifier, tableOid uint64) InsertPlan {
+func NewRawInsertPlan(rawValues []btuple.Modifier, dbOid, tableOid uint64) InsertPlan {
 	return &insertPlan{
 		AbstractPlan: NewAbstractPlan(nil, nil),
 		rawValues:    rawValues,
+		dbOid:        dbOid,
 		tableOid:     tableOid,
 	}
 }
 
-func NewInsertPlan(children []AbstractPlan, tableOid uint64) InsertPlan {
+func NewInsertPlan(children []AbstractPlan, dbOid, tableOid uint64) InsertPlan {
 	return &insertPlan{
 		AbstractPlan: NewAbstractPlan(nil, children),
+		dbOid:        dbOid,
 		tableOid:     tableOid,
 	}
 }
