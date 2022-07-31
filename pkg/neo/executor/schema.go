@@ -32,7 +32,7 @@ func (s *schemaExec) Init() {
 	s.done = false
 }
 
-func (s schemaExec) Next(tuple *btuple.Modifier, rid *primitive.ObjectID) (bool, error) {
+func (s schemaExec) Next(ctx context.Context, tuple *btuple.Modifier, rid *primitive.ObjectID) (bool, error) {
 	if s.done {
 		return false, nil
 	}
