@@ -10,6 +10,10 @@ type ColumnInfo struct {
 	DefaultValueBit []byte
 }
 
+func (c *ColumnInfo) GetDefaultValue() []byte {
+	return c.DefaultValueBit
+}
+
 func (c *ColumnInfo) Clone() *ColumnInfo {
 	nc := *c
 	if nc.DefaultValue != nil {
