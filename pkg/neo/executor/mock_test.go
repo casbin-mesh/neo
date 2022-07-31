@@ -125,6 +125,13 @@ m = r.sub == p.sub && r.obj == p.obj && r.act == p.act`
 	mockDBDataSet []btuple.Modifier
 )
 
+func IdsAsserter(t *testing.T, expected []primitive.ObjectID, got []primitive.ObjectID) {
+	assert.Equal(t, len(expected), len(got))
+	for i, modifier := range expected {
+		assert.Equal(t, modifier, got[i])
+	}
+}
+
 func TuplesAsserter(t *testing.T, expected []btuple.Modifier, got []btuple.Modifier) {
 	assert.Equal(t, len(expected), len(got))
 	for i, modifier := range expected {
@@ -208,6 +215,13 @@ func (db *mockDB) CreateDB(t *testing.T, sc session.Context, info *model.DBInfo)
 
 func (db *mockDB) InsertTuples(t *testing.T, sc session.Context, dbOid, tableOid uint64, tuples []btuple.Modifier) (result []btuple.Modifier, ids []primitive.ObjectID, err error) {
 	executor, err := NewInsertExecutor(sc, plan.NewRawInsertPlan(tuples, dbOid, tableOid), nil)
+	assert.Nil(t, err)
+	result, ids, err = Execute(executor, context.TODO())
+	return
+}
+
+func (db *mockDB) SeqScan(t *testing.T, sc session.Context, dbOid, tableOid uint64, schema bschema.Reader) (result []btuple.Modifier, ids []primitive.ObjectID, err error) {
+	executor, err := NewSeqScanExecutor(sc, plan.NewSeqScanPlan(schema, nil, dbOid, tableOid))
 	assert.Nil(t, err)
 	result, ids, err = Execute(executor, context.TODO())
 	return

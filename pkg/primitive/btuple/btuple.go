@@ -32,13 +32,12 @@ type mapping struct {
 
 type bufferedReader struct {
 	raw []byte
-	len int
 	mt  map[int]mapping
 }
 
 func (b *bufferedReader) Values() []Elem {
-	elems := make([]Elem, 0, b.len)
-	for i := 0; i < b.len; i++ {
+	elems := make([]Elem, 0, len(b.mt))
+	for i := 0; i < len(b.mt); i++ {
 		elems = append(elems, b.ValueAt(i))
 	}
 	return elems

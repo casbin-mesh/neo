@@ -11,6 +11,11 @@ import (
 type Executor interface {
 	Init()
 	Next(ctx context.Context, tuple *btuple.Modifier, rid *primitive.ObjectID) (bool, error)
+	Close() error
+}
+
+func (b *baseExecutor) Close() error {
+	return nil
 }
 
 type baseExecutor struct {
@@ -31,7 +36,6 @@ func newBaseExecutor(ctx session.Context) baseExecutor {
 
 func Execute(executor Executor, ctx context.Context) (result []btuple.Modifier, ids []primitive.ObjectID, err error) {
 	executor.Init()
-
 	var (
 		next bool
 	)
@@ -52,5 +56,6 @@ func Execute(executor Executor, ctx context.Context) (result []btuple.Modifier, 
 		}
 
 	}
+	err = executor.Close()
 	return
 }
