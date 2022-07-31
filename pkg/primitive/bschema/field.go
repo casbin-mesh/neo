@@ -5,11 +5,17 @@ import "github.com/casbin-mesh/neo/pkg/primitive/bsontype"
 type Field interface {
 	Type() bsontype.Type
 	Name() []byte
+	GetDefaultValue() []byte
 }
 
 type field struct {
-	name []byte
-	typ  bsontype.Type
+	name         []byte
+	typ          bsontype.Type
+	defaultValue []byte
+}
+
+func (f *field) GetDefaultValue() []byte {
+	return f.defaultValue
 }
 
 func (f *field) Type() bsontype.Type {

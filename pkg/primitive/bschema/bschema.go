@@ -18,7 +18,7 @@ type ReaderWriter interface {
 }
 
 type Writer interface {
-	Append(typ bsontype.Type, name []byte)
+	Append(typ bsontype.Type, name []byte, defaultValue []byte)
 	EncodeVal() []byte
 	EncodeKey() []byte
 }
@@ -44,10 +44,11 @@ func NewReaderWriter(namespace, name []byte) ReaderWriter {
 	return &readerWriter{namespace: namespace, name: name}
 }
 
-func (bs *readerWriter) Append(typ bsontype.Type, name []byte) {
+func (bs *readerWriter) Append(typ bsontype.Type, name []byte, defaultValue []byte) {
 	bs.fields = append(bs.fields, &field{
-		name: name,
-		typ:  typ,
+		name:         name,
+		typ:          typ,
+		defaultValue: defaultValue,
 	})
 	bs.valLen += len(name) + 2 // 1B for type, 1B for NULL terminator
 }
