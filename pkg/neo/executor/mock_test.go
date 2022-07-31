@@ -146,6 +146,19 @@ func CloneTupleSet(set []btuple.Modifier) (output []btuple.Modifier) {
 	return
 }
 
+func UpdateValue(set []btuple.Modifier, schema bschema.Reader, updateAttrs map[int]plan.Modifier) {
+	for _, s := range set {
+		for i := 0; i < schema.FieldsLen(); i++ {
+			if m, ok := updateAttrs[i]; ok {
+				switch m.Type() {
+				case plan.ModifierSet:
+					s.Set(i, m.Value().([]byte))
+				}
+			}
+		}
+	}
+}
+
 func MergeDefaultValue(set []btuple.Modifier, schema bschema.Reader) {
 	for _, mo := range set {
 		err := mo.MergeDefaultValue(schema)
