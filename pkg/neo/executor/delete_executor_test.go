@@ -27,9 +27,14 @@ func TestNewDeleteExecutor(t *testing.T) {
 
 	// delete tuples
 	sc = mockDb.NewTxnAt(6, true)
-	scan, err := NewSeqScanExecutor(sc, plan.NewSeqScanPlan(mockDBInfo1.TableInfo[0], nil, 1, 1))
-	assert.Nil(t, err)
-	exec, err := NewDeleteExecutor(sc, plan.NewDeletePlan(nil, 1, 1), scan)
+	builder := executorBuilder{ctx: sc}
+	exec, err := builder.Build(
+		plan.NewDeletePlan(
+			[]plan.AbstractPlan{
+				plan.NewSeqScanPlan(mockDBInfo1.TableInfo[0], nil, 1, 1),
+			},
+			1, 1),
+	), builder.Error()
 	assert.Nil(t, err)
 	result, ids, err := Execute(exec, context.TODO())
 	assert.Nil(t, err)
@@ -44,7 +49,7 @@ func TestNewDeleteExecutor(t *testing.T) {
 
 	// scan again
 	sc = mockDb.NewTxnAt(8, true)
-	scan, err = NewSeqScanExecutor(sc, plan.NewSeqScanPlan(mockDBInfo1.TableInfo[0], nil, 1, 1))
+	scan, err := NewSeqScanExecutor(sc, plan.NewSeqScanPlan(mockDBInfo1.TableInfo[0], nil, 1, 1))
 	result, ids, err = Execute(scan, context.TODO())
 	err = sc.CommitTxn(context.TODO(), 9)
 	assert.Nil(t, err)

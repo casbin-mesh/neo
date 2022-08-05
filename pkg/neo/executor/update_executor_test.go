@@ -32,7 +32,15 @@ func TestNewUpdateExecutor(t *testing.T) {
 	updateAttrs := map[int]plan.Modifier{}
 	updateAttrs[3] = plan.NewModifier(plan.ModifierSet, []byte("deny"))
 
-	exec, err := NewUpdateExecutor(sc, plan.NewUpdatePlan(nil, 1, 1, updateAttrs), scan)
+	builder := executorBuilder{ctx: sc}
+	exec, err := builder.Build(
+		plan.NewUpdatePlan(
+			[]plan.AbstractPlan{
+				plan.NewSeqScanPlan(mockDBInfo1.TableInfo[0], nil, 1, 1),
+			},
+			1, 1, updateAttrs),
+	), builder.Error()
+
 	assert.Nil(t, err)
 
 	result, ids, err := Execute(exec, context.TODO())
