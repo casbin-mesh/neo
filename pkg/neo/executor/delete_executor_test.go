@@ -9,7 +9,7 @@ import (
 )
 
 func TestNewDeleteExecutor(t *testing.T) {
-	p := "./__test_tmp__/insert_exec"
+	p := "./__test_tmp__/delete_exec"
 	mockDb := OpenMockDB(t, p)
 	defer func() {
 		mockDb.Close()
