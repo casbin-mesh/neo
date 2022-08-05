@@ -227,14 +227,16 @@ func (db *mockDB) CreateDB(t *testing.T, sc session.Context, info *model.DBInfo)
 }
 
 func (db *mockDB) InsertTuples(t *testing.T, sc session.Context, dbOid, tableOid uint64, tuples []btuple.Modifier) (result []btuple.Modifier, ids []primitive.ObjectID, err error) {
-	executor, err := NewInsertExecutor(sc, plan.NewRawInsertPlan(tuples, dbOid, tableOid), nil)
-	assert.Nil(t, err)
+	builder := executorBuilder{ctx: sc}
+	executor := builder.Build(plan.NewRawInsertPlan(tuples, dbOid, tableOid))
+	assert.Nil(t, builder.Error())
 	result, ids, err = Execute(executor, context.TODO())
 	return
 }
 
 func (db *mockDB) SeqScan(t *testing.T, sc session.Context, dbOid, tableOid uint64, schema bschema.Reader) (result []btuple.Modifier, ids []primitive.ObjectID, err error) {
-	executor, err := NewSeqScanExecutor(sc, plan.NewSeqScanPlan(schema, nil, dbOid, tableOid))
+	builder := executorBuilder{ctx: sc}
+	executor, err := builder.Build(plan.NewSeqScanPlan(schema, nil, dbOid, tableOid)), builder.Error()
 	assert.Nil(t, err)
 	result, ids, err = Execute(executor, context.TODO())
 	return

@@ -61,7 +61,7 @@ func (u updatePlan) GetUpdateAttrs() UpdateAttrsInfo {
 	return u.updateAttrs
 }
 
-func NewUpdatePlan(children []AbstractPlan, dbOid, tableOid uint64, updateAttrs UpdateAttrsInfo) UpdatePlan {
+func NewUpdatePlan(children []AbstractPlan, tableOid, dbOid uint64, updateAttrs UpdateAttrsInfo) UpdatePlan {
 	return &updatePlan{
 		AbstractPlan: NewAbstractPlan(nil, children),
 		tableOid:     tableOid,

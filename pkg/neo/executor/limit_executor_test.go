@@ -25,17 +25,20 @@ func TestNewLimitExecutor(t *testing.T) {
 	assert.Nil(t, mockDb.WaitForMark(context.TODO(), 5))
 
 	sc = mockDb.NewTxnAt(6, false)
-	scan, err := NewSeqScanExecutor(sc, plan.NewSeqScanPlan(mockDBInfo1.TableInfo[0], nil, 1, 1))
-	assert.Nil(t, nil)
+	builder := executorBuilder{ctx: sc}
+	limit, err := builder.Build(
+		plan.NewLimitPlan([]plan.AbstractPlan{
+			plan.NewSeqScanPlan(mockDBInfo1.TableInfo[0], nil, 1, 1),
+		}, 10),
+	), builder.Error()
 
-	limit := NewLimitExecutor(sc, plan.NewLimitPlan(nil, 10), scan)
 	result, ids, err := Execute(limit, context.TODO())
 	assert.Nil(t, nil)
 
 	IdsAsserter(t, insertedIds, ids)
 	TuplesAsserter(t, inserted, result)
 
-	scan, err = NewSeqScanExecutor(sc, plan.NewSeqScanPlan(mockDBInfo1.TableInfo[0], nil, 1, 1))
+	scan, err := NewSeqScanExecutor(sc, plan.NewSeqScanPlan(mockDBInfo1.TableInfo[0], nil, 1, 1))
 	assert.Nil(t, nil)
 
 	limit = NewLimitExecutor(sc, plan.NewLimitPlan(nil, 1), scan)
