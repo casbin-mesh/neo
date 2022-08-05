@@ -2,7 +2,6 @@ package executor
 
 import (
 	"context"
-	"github.com/casbin-mesh/neo/pkg/neo/executor/plan"
 	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
@@ -35,11 +34,9 @@ func TestInsertExecutor(t *testing.T) {
 
 	sc := mockDb.NewTxnAt(4, true)
 
-	executor, err := NewInsertExecutor(sc, plan.NewRawInsertPlan(mockDBDataSet, 1, 1), nil)
+	result, ids, err := mockDb.InsertTuples(t, sc, 1, 1, mockDBDataSet)
+
 	assert.Nil(t, err)
-
-	result, ids, err := Execute(executor, context.TODO())
-
 	assert.Equal(t, len(result), len(mockDBDataSet))
 	assert.Equal(t, len(ids), len(mockDBDataSet))
 

@@ -21,6 +21,7 @@ func ParseTupleRecordKey(b []byte) (primitive.ObjectID, error) {
 	return data, nil
 }
 
+// TupleRecordBegin t{tableId}_r
 func TupleRecordBegin(tableId uint64) []byte {
 	buf := make([]byte, 0, 11)
 	buf = append(buf, tablePrefix...)
