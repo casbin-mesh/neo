@@ -45,12 +45,26 @@ func EncodeIndexInfo(info *model.IndexInfo) []byte {
 	fb.CIStrAddO(builder, builder.CreateString(info.Table.O))
 	tableName := fb.CIStrEnd(builder)
 
+	fb.TableInfoStartColumnIdsVector(builder, len(info.Columns))
+	for _, column := range info.Columns {
+		fb.CIStrStart(builder)
+		fb.CIStrAddL(builder, builder.CreateString(column.ColName.L))
+		fb.CIStrAddO(builder, builder.CreateString(column.ColName.O))
+		indexColName := fb.CIStrEnd(builder)
+		fb.IndexColumnStart(builder)
+		fb.IndexColumnAddName(builder, indexColName)
+		fb.IndexColumnAddOffset(builder, int64(column.Offset))
+		builder.PrependUOffsetT(fb.IndexColumnEnd(builder))
+	}
+	columns := builder.EndVector(len(info.Columns))
+
 	fb.IndexInfoStart(builder)
 	fb.IndexInfoAddId(builder, info.ID)
 	fb.IndexInfoAddName(builder, name)
 	fb.IndexInfoAddTableName(builder, tableName)
 	fb.IndexInfoAddPrimary(builder, info.Primary)
 	fb.IndexInfoAddUnique(builder, info.Unique)
+	fb.IndexInfoAddColumns(builder, columns)
 
 	orc := fb.IndexInfoEnd(builder)
 	builder.Finish(orc)

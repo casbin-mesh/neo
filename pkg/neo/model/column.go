@@ -5,6 +5,7 @@ import "github.com/casbin-mesh/neo/pkg/primitive/bsontype"
 type ColumnInfo struct {
 	ID              uint64
 	ColName         CIStr
+	Offset          int
 	Tp              bsontype.Type
 	DefaultValue    Cloneable
 	DefaultValueBit []byte

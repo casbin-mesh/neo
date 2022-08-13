@@ -33,6 +33,7 @@ func EncodeColumnInfo(info *model.ColumnInfo) []byte {
 	fb.ColumnInfoAddTp(builder, byte(info.Tp))
 	fb.ColumnInfoAddDefaultValue(builder, defaultValueBit)
 	fb.ColumnInfoAddName(builder, name)
+	fb.ColumnInfoAddOffset(builder, int64(info.Offset))
 
 	orc := fb.ColumnInfoEnd(builder)
 	builder.Finish(orc)

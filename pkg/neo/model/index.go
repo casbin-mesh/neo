@@ -2,15 +2,30 @@ package model
 
 type IndexType uint8
 
+type IndexColumn struct {
+	ColName CIStr
+	Offset  int
+}
+
+func (i *IndexColumn) Clone() *IndexColumn {
+	return &*i
+}
+
 type IndexInfo struct {
 	ID      uint64
 	Name    CIStr
 	Table   CIStr
+	Columns []*IndexColumn
 	Unique  bool
 	Primary bool
 	Tp      IndexType
 }
 
 func (i *IndexInfo) Clone() *IndexInfo {
-	return &*i
+	ni := &*i
+	ni.Columns = make([]*IndexColumn, len(i.Columns))
+	for j, column := range i.Columns {
+		ni.Columns[j] = column.Clone()
+	}
+	return ni
 }

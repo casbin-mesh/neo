@@ -71,19 +71,27 @@ func (rcv *IndexInfo) TableName(obj *CIStr) *CIStr {
 	return nil
 }
 
-func (rcv *IndexInfo) Unique() bool {
+func (rcv *IndexInfo) Columns(obj *IndexColumn, j int) bool {
 	o := flatbuffers.UOffsetT(rcv._tab.Offset(10))
 	if o != 0 {
-		return rcv._tab.GetBool(o + rcv._tab.Pos)
+		x := rcv._tab.Vector(o)
+		x += flatbuffers.UOffsetT(j) * 4
+		x = rcv._tab.Indirect(x)
+		obj.Init(rcv._tab.Bytes, x)
+		return true
 	}
 	return false
 }
 
-func (rcv *IndexInfo) MutateUnique(n bool) bool {
-	return rcv._tab.MutateBoolSlot(10, n)
+func (rcv *IndexInfo) ColumnsLength() int {
+	o := flatbuffers.UOffsetT(rcv._tab.Offset(10))
+	if o != 0 {
+		return rcv._tab.VectorLen(o)
+	}
+	return 0
 }
 
-func (rcv *IndexInfo) Primary() bool {
+func (rcv *IndexInfo) Unique() bool {
 	o := flatbuffers.UOffsetT(rcv._tab.Offset(12))
 	if o != 0 {
 		return rcv._tab.GetBool(o + rcv._tab.Pos)
@@ -91,12 +99,24 @@ func (rcv *IndexInfo) Primary() bool {
 	return false
 }
 
-func (rcv *IndexInfo) MutatePrimary(n bool) bool {
+func (rcv *IndexInfo) MutateUnique(n bool) bool {
 	return rcv._tab.MutateBoolSlot(12, n)
 }
 
-func (rcv *IndexInfo) Tp() byte {
+func (rcv *IndexInfo) Primary() bool {
 	o := flatbuffers.UOffsetT(rcv._tab.Offset(14))
+	if o != 0 {
+		return rcv._tab.GetBool(o + rcv._tab.Pos)
+	}
+	return false
+}
+
+func (rcv *IndexInfo) MutatePrimary(n bool) bool {
+	return rcv._tab.MutateBoolSlot(14, n)
+}
+
+func (rcv *IndexInfo) Tp() byte {
+	o := flatbuffers.UOffsetT(rcv._tab.Offset(16))
 	if o != 0 {
 		return rcv._tab.GetByte(o + rcv._tab.Pos)
 	}
@@ -104,11 +124,11 @@ func (rcv *IndexInfo) Tp() byte {
 }
 
 func (rcv *IndexInfo) MutateTp(n byte) bool {
-	return rcv._tab.MutateByteSlot(14, n)
+	return rcv._tab.MutateByteSlot(16, n)
 }
 
 func IndexInfoStart(builder *flatbuffers.Builder) {
-	builder.StartObject(6)
+	builder.StartObject(7)
 }
 func IndexInfoAddId(builder *flatbuffers.Builder, id uint64) {
 	builder.PrependUint64Slot(0, id, 0)
@@ -119,14 +139,20 @@ func IndexInfoAddName(builder *flatbuffers.Builder, name flatbuffers.UOffsetT) {
 func IndexInfoAddTableName(builder *flatbuffers.Builder, tableName flatbuffers.UOffsetT) {
 	builder.PrependUOffsetTSlot(2, flatbuffers.UOffsetT(tableName), 0)
 }
+func IndexInfoAddColumns(builder *flatbuffers.Builder, columns flatbuffers.UOffsetT) {
+	builder.PrependUOffsetTSlot(3, flatbuffers.UOffsetT(columns), 0)
+}
+func IndexInfoStartColumnsVector(builder *flatbuffers.Builder, numElems int) flatbuffers.UOffsetT {
+	return builder.StartVector(4, numElems, 4)
+}
 func IndexInfoAddUnique(builder *flatbuffers.Builder, unique bool) {
-	builder.PrependBoolSlot(3, unique, false)
+	builder.PrependBoolSlot(4, unique, false)
 }
 func IndexInfoAddPrimary(builder *flatbuffers.Builder, primary bool) {
-	builder.PrependBoolSlot(4, primary, false)
+	builder.PrependBoolSlot(5, primary, false)
 }
 func IndexInfoAddTp(builder *flatbuffers.Builder, tp byte) {
-	builder.PrependByteSlot(5, tp, 0)
+	builder.PrependByteSlot(6, tp, 0)
 }
 func IndexInfoEnd(builder *flatbuffers.Builder) flatbuffers.UOffsetT {
 	return builder.EndObject()

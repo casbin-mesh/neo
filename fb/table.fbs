@@ -5,17 +5,24 @@ table CIStr {
     l:string;
 }
 
+table IndexColumn{
+    name:CIStr;
+    offset:int64;
+}
+
 table ColumnInfo {
     id:ulong;
     name:CIStr;
     default_value:[ubyte];
     tp:ubyte;
+    offset:int64;
 }
 
 table IndexInfo{
     id:ulong;
     name:CIStr;
     table_name:CIStr;
+    columns:[IndexColumn];
     unique:bool;
     primary:bool;
     tp:ubyte;
@@ -25,8 +32,8 @@ table FKInfo{
     id:ulong;
     name:CIStr;
     ref_table:CIStr;
-    ref_column_ids:[CIStr];
-    column_ids:[CIStr];
+    ref_column_ids:[ulong];
+    column_ids:[ulong];
     on_delete:long;
     on_update:long;
 }
