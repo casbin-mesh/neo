@@ -71,16 +71,13 @@ func (rcv *FKInfo) RefTable(obj *CIStr) *CIStr {
 	return nil
 }
 
-func (rcv *FKInfo) RefColumnIds(obj *CIStr, j int) bool {
+func (rcv *FKInfo) RefColumnIds(j int) uint64 {
 	o := flatbuffers.UOffsetT(rcv._tab.Offset(10))
 	if o != 0 {
-		x := rcv._tab.Vector(o)
-		x += flatbuffers.UOffsetT(j) * 4
-		x = rcv._tab.Indirect(x)
-		obj.Init(rcv._tab.Bytes, x)
-		return true
+		a := rcv._tab.Vector(o)
+		return rcv._tab.GetUint64(a + flatbuffers.UOffsetT(j*8))
 	}
-	return false
+	return 0
 }
 
 func (rcv *FKInfo) RefColumnIdsLength() int {
@@ -91,16 +88,22 @@ func (rcv *FKInfo) RefColumnIdsLength() int {
 	return 0
 }
 
-func (rcv *FKInfo) ColumnIds(obj *CIStr, j int) bool {
-	o := flatbuffers.UOffsetT(rcv._tab.Offset(12))
+func (rcv *FKInfo) MutateRefColumnIds(j int, n uint64) bool {
+	o := flatbuffers.UOffsetT(rcv._tab.Offset(10))
 	if o != 0 {
-		x := rcv._tab.Vector(o)
-		x += flatbuffers.UOffsetT(j) * 4
-		x = rcv._tab.Indirect(x)
-		obj.Init(rcv._tab.Bytes, x)
-		return true
+		a := rcv._tab.Vector(o)
+		return rcv._tab.MutateUint64(a+flatbuffers.UOffsetT(j*8), n)
 	}
 	return false
+}
+
+func (rcv *FKInfo) ColumnIds(j int) uint64 {
+	o := flatbuffers.UOffsetT(rcv._tab.Offset(12))
+	if o != 0 {
+		a := rcv._tab.Vector(o)
+		return rcv._tab.GetUint64(a + flatbuffers.UOffsetT(j*8))
+	}
+	return 0
 }
 
 func (rcv *FKInfo) ColumnIdsLength() int {
@@ -109,6 +112,15 @@ func (rcv *FKInfo) ColumnIdsLength() int {
 		return rcv._tab.VectorLen(o)
 	}
 	return 0
+}
+
+func (rcv *FKInfo) MutateColumnIds(j int, n uint64) bool {
+	o := flatbuffers.UOffsetT(rcv._tab.Offset(12))
+	if o != 0 {
+		a := rcv._tab.Vector(o)
+		return rcv._tab.MutateUint64(a+flatbuffers.UOffsetT(j*8), n)
+	}
+	return false
 }
 
 func (rcv *FKInfo) OnDelete() int64 {
@@ -151,13 +163,13 @@ func FKInfoAddRefColumnIds(builder *flatbuffers.Builder, refColumnIds flatbuffer
 	builder.PrependUOffsetTSlot(3, flatbuffers.UOffsetT(refColumnIds), 0)
 }
 func FKInfoStartRefColumnIdsVector(builder *flatbuffers.Builder, numElems int) flatbuffers.UOffsetT {
-	return builder.StartVector(4, numElems, 4)
+	return builder.StartVector(8, numElems, 8)
 }
 func FKInfoAddColumnIds(builder *flatbuffers.Builder, columnIds flatbuffers.UOffsetT) {
 	builder.PrependUOffsetTSlot(4, flatbuffers.UOffsetT(columnIds), 0)
 }
 func FKInfoStartColumnIdsVector(builder *flatbuffers.Builder, numElems int) flatbuffers.UOffsetT {
-	return builder.StartVector(4, numElems, 4)
+	return builder.StartVector(8, numElems, 8)
 }
 func FKInfoAddOnDelete(builder *flatbuffers.Builder, onDelete int64) {
 	builder.PrependInt64Slot(5, onDelete, 0)
