@@ -25,7 +25,7 @@ type Node interface {
 	SetText(text string)
 }
 
-// ExprNode is a node that can be evaluated.
+// ExprNode is a expr that can be evaluated.
 // Name of implementations should have 'Expr' suffix.
 type ExprNode interface {
 	// Node is embedded in ExprNode.

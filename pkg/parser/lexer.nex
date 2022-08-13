@@ -1,15 +1,18 @@
 /[ \t]/  { /* Skip blanks and tabs. */ }
 /[0-9]+/ { lval.i,_ = strconv.Atoi(yylex.Text()); return INT }
 /[0-9]+\.?[0-9]*/ { lval.f,_ = strconv.ParseFloat(yylex.Text(), 64); return FLOAT }
+/in|IN/ { return BETWEEN }
 /false|true|FALSE|TRUE/      { lval.b,_ = strconv.ParseBool(yylex.Text()); return BOOL }
 /[A-Za-z_][A-Za-z0-9_]*/  { lval.s = yylex.Text(); return IDENT }
-/\"([^\\"]|\\")*\"/      { lval.s = yylex.Text(); return STRING }
-/\'([^\\"]|\\")*\'/      { lval.s = yylex.Text(); return STRING }
+/\"([^\\"]|\\")*\"/      { lval.s = ast.RemoveStringQuote(yylex.Text()); return STRING }
+/\'.*\'/      { lval.s = ast.RemoveStringQuote(yylex.Text()); return STRING }
+/\`.*\`/      { lval.s = ast.RemoveStringQuote(yylex.Text()); return STRING }
 /\(/  { return OP  }
 /\)/  { return CP }
 /\[/  { return OB }
 /\]/  { return CB }
 
+/\*\*/ { return POW }
 /\+/  { return ADD }
 /\-/  { return SUB }
 /\*/  { return MUL }
@@ -24,9 +27,9 @@
 
 /\!/  { return BOOL_NOT }
 /\&&/ { return AND_AND }
-/\||/ { return OR_OR }
+/\|\|/ { return OR_OR }
 
-/\??/ { return NULL_COALESCENCE }
+/\?\?/ { return NULL_COALESCENCE }
 /\?/  { return TERNARY_TRUE }
 /\:/  { return TERNARY_FALSE }
 
@@ -37,15 +40,17 @@
 /\==/ { return EQ }
 /\!=/ { return NE }
 
-/\=~/ { return RE }
-/\=~/ { return NRE }
+/=~/ { return RE }
+/!~/ { return NRE }
 /,/  { return SEPARATOR }
-/in|IN/ { return BETWEEN }
 
 /./ { return int(yylex.Text()[0]) }
 //
 package parser
-import ("strconv")
+import (
+    "strconv"
+    "github.com/casbin-mesh/neo/pkg/parser/ast"
+)
 func main(){
 
 }

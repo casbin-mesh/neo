@@ -1,5 +1,6 @@
 install:
-	go get -u golang.org/x/tools/cmd/goyacc github.com/blynn/nex
+	go get golang.org/x/tools/cmd/goyacc & go get github.com/blynn/nex
+	go install golang.org/x/tools/cmd/goyacc & go install github.com/blynn/nex
 
 
 parser:
