@@ -60,7 +60,7 @@ func (ps ParameterSet) AddNaiveParameter(k string, p interface{}) {
 	ps[k] = p
 }
 
-func (ps ParameterSet) AddParameter(k string, p Parameters) {
+func (ps ParameterSet) AddParameter(k string, p Primitive) {
 	ps[k] = p
 }
 

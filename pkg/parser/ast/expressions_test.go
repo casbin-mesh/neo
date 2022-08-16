@@ -14,10 +14,10 @@ type TestSet struct {
 }
 
 func runTests(sets []TestSet, t *testing.T) {
-	for _, set := range sets {
+	for i, set := range sets {
 		actual, err := set.expr.Evaluate(set.ctx)
 		assert.Equal(t, set.err, err)
-		assert.Equal(t, set.expected, actual)
+		assert.Equalf(t, set.expected, actual, "set:%d\n", i)
 	}
 }
 

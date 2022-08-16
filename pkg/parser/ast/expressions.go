@@ -83,127 +83,181 @@ func hasType(typ Type, ps ...*Primitive) []int {
 	return result
 }
 
-func hasVariable(ps ...*Primitive) []int {
-	return hasType(VARIABLE, ps...)
+func hasInt(l, r *Primitive) (bool, bool) {
+	return l.Typ == INT, r.Typ == INT
 }
 
-func hasString(ps ...*Primitive) []int {
-	return hasType(STRING, ps...)
-}
-
-func hasBool(ps ...*Primitive) []int {
-	return hasType(BOOL, ps...)
-}
-
-func hasInt(ps ...*Primitive) []int {
-	return hasType(INT, ps...)
-}
-
-func hasFloat64(ps ...*Primitive) []int {
-	return hasType(FLOAT64, ps...)
+func hasFloat64(l, r *Primitive) (bool, bool) {
+	return l.Typ == FLOAT64, r.Typ == FLOAT64
 }
 
 func getArithmeticRetValue(ctx EvaluateCtx, op Op, evalMap ArithmeticEvalMap, l, r *Primitive) *Primitive {
-	intIdx := hasInt(l, r)
-	floatIdx := hasFloat64(l, r)
+	lInt, rInt := hasInt(l, r)
+	lFloat, rFloat := hasFloat64(l, r)
 	evalInt := evalMap[op].evalInt
 	evalFloat := evalMap[op].evalFloat
 
-	if len(intIdx) == 2 {
-		return &Primitive{Typ: INT, Value: evalInt(l.Value.(int), r.Value.(int))}
-	} else if len(floatIdx) == 2 {
-		return &Primitive{Typ: FLOAT64, Value: evalFloat(l.Value.(float64), r.Value.(float64))}
-	} else if len(floatIdx) == 1 && len(intIdx) == 1 {
-		fIdx := floatIdx[0]
-		var (
-			lVal float64
-			rVal float64
-		)
-		switch fIdx {
-		case 0:
-			lVal = l.Value.(float64)
-			rVal = float64(r.Value.(int))
-		case 1:
-			lVal = float64(l.Value.(int))
-			rVal = r.Value.(float64)
+	if lInt && rInt {
+		l.Typ = INT
+		l.Value = evalInt(l.Value.(int), r.Value.(int))
+		return l
+	} else if lFloat && rFloat {
+		l.Typ = FLOAT64
+		l.Value = evalFloat(l.Value.(float64), r.Value.(float64))
+		return l
+	} else {
+		if lFloat && rInt {
+			l.Typ = FLOAT64
+			l.Value = evalFloat(l.Value.(float64), float64(r.Value.(int)))
+		} else if lInt && rFloat {
+			l.Typ = FLOAT64
+			l.Value = evalFloat(float64(l.Value.(int)), r.Value.(float64))
 		}
-		return &Primitive{
-			Typ: FLOAT64, Value: evalFloat(lVal, rVal),
-		}
+		return l
 	}
-	return nil
 }
 
 func getConditionalExprRetValue(ctx EvaluateCtx, op Op, evalMap BoolEvalMap, l, r *Primitive) *Primitive {
 
 	evalGroup := evalMap[op]
 	if l.Typ != r.Typ {
-		return &Primitive{Typ: BOOL, Value: false}
+		l.Typ = BOOL
+		l.Value = false
+		return l
 	}
 	switch l.Typ {
 	case INT:
-		return &Primitive{Typ: BOOL, Value: evalGroup.evalInt(l.Value.(int), r.Value.(int))}
+		l.Typ = BOOL
+		l.Value = evalGroup.evalInt(l.Value.(int), r.Value.(int))
+		return l
 	case FLOAT64:
-		return &Primitive{Typ: BOOL, Value: evalGroup.evalFloat(l.Value.(float64), r.Value.(float64))}
+		l.Typ = BOOL
+		l.Value = evalGroup.evalFloat(l.Value.(float64), r.Value.(float64))
+		return l
 	case STRING:
-		return &Primitive{Typ: BOOL, Value: evalGroup.evalString(l.Value.(string), r.Value.(string))}
+		l.Typ = BOOL
+		l.Value = evalGroup.evalString(l.Value.(string), r.Value.(string))
+		return l
 	case BOOL:
-		return &Primitive{Typ: BOOL, Value: evalGroup.evalBool(l.Value.(bool), r.Value.(bool))}
+		l.Typ = BOOL
+		l.Value = evalGroup.evalBool(l.Value.(bool), r.Value.(bool))
+		return l
+	case VARIABLE:
+
 		// TODO: eval variable
 	}
 
-	return &Primitive{Typ: BOOL, Value: false}
+	return BoolFalse
 }
 
 // getLogicalAndRetValue if all values are truthy, the value of the last operand is returned.
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Logical_AND
-func getLogicalAndRetValue(ctx EvaluateCtx, l, r *Primitive) *Primitive {
-	boolIdx := hasBool(l, r)
-	lhs, rhs := l.AsBool(ctx), r.AsBool(ctx)
-	switch len(boolIdx) {
-	case 2:
-		return &Primitive{Typ: BOOL, Value: lhs && rhs}
-	default: // The AND operator preserves non-Boolean values and returns them as they are:
-		if lhs && rhs { // if all values are truthy, the value of the last operand is returned.
-			return r
-		} else if !lhs { // returning immediately with the value of the first falsy operand it encounters;
-			return l
-		} else if !rhs {
-			return r
+func getLogicalAndRetValue(ctx EvaluateCtx, l, r Evaluable) (*Primitive, error) {
+	var (
+		lhs, rhs *Primitive
+		err      error
+	)
+
+	if lhs, err = l.Evaluate(ctx); err != nil {
+		return nil, err
+	}
+	for lhs.Typ == VARIABLE {
+		lhs, err = lhs.Evaluate(ctx)
+		if err != nil {
+			return nil, err
 		}
-		panic("unreachable")
 	}
 
+	// Short Circuital
+	if lhs.Typ == BOOL && !lhs.AsBool(ctx) {
+		lhs.Value = false
+		return lhs, nil
+	}
+
+	if rhs, err = r.Evaluate(ctx); err != nil {
+		return nil, err
+	}
+	for rhs.Typ == VARIABLE {
+		rhs, err = rhs.Evaluate(ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	lVal, rVal := lhs.AsBool(ctx), rhs.AsBool(ctx)
+
+	if lhs.Typ == BOOL && rhs.Typ == BOOL {
+		lhs.Typ = BOOL
+		lhs.Value = lVal && rVal
+		return lhs, nil
+	} else {
+		if lVal && rVal { // if all values are truthy, the value of the last operand is returned.
+			return rhs, nil
+		} else if !lVal { // returning immediately with the value of the first falsy operand it encounters;
+			return lhs, nil
+		} else if !rVal {
+			return rhs, nil
+		}
+	}
+	panic("unreachable")
 }
 
 // getLogicalOrRetValue If expr1 can be converted to true, returns expr1; else, returns expr2.
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Logical_OR
-func getLogicalOrRetValue(ctx EvaluateCtx, l, r *Primitive) *Primitive {
-	boolIdx := hasBool(l, r)
-	lhs, rhs := l.AsBool(ctx), r.AsBool(ctx)
+func getLogicalOrRetValue(ctx EvaluateCtx, l, r Evaluable) (*Primitive, error) {
 
-	switch len(boolIdx) {
-	case 2:
-		return &Primitive{Typ: BOOL, Value: lhs || rhs}
-	default:
-		if lhs {
-			return l
-		} else if rhs {
-			return r
+	var (
+		lhs, rhs *Primitive
+		err      error
+	)
+
+	if lhs, err = l.Evaluate(ctx); err != nil {
+		return nil, err
+	}
+	for lhs.Typ == VARIABLE {
+		lhs, err = lhs.Evaluate(ctx)
+		if err != nil {
+			return nil, err
 		}
-		return r
 	}
 
+	// Short Circuital
+	if lhs.Typ == BOOL && lhs.AsBool(ctx) {
+		lhs.Typ = BOOL
+		lhs.Value = true
+		return lhs, nil
+	}
+
+	if rhs, err = r.Evaluate(ctx); err != nil {
+		return nil, err
+	}
+	for rhs.Typ == VARIABLE {
+		rhs, err = rhs.Evaluate(ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	lVal, rVal := lhs.AsBool(ctx), rhs.AsBool(ctx)
+
+	if lhs.Typ == BOOL && rhs.Typ == BOOL {
+		lhs.Typ = BOOL
+		lhs.Value = lVal && rVal
+		return lhs, nil
+	} else if lVal {
+		return lhs, nil
+	}
+	return rhs, nil
 }
 
-func getLogicalExprRetValue(ctx EvaluateCtx, op Op, l, r *Primitive) *Primitive {
+func getLogicalExprRetValue(ctx EvaluateCtx, op Op, l, r Evaluable) (*Primitive, error) {
 	switch op {
 	case AND_AND:
 		return getLogicalAndRetValue(ctx, l, r)
 	case OR_OR:
 		return getLogicalOrRetValue(ctx, l, r)
 	}
-	return nil
+	return nil, nil
 }
 
 // getNullishCoalescingOperationExprRetValue The nullish coalescing operator (??) is a logical operator,
@@ -218,23 +272,14 @@ func getNullishCoalescingOperationExprRetValue(ctx EvaluateCtx, l, r *Primitive)
 
 func getBetweenOperationExprRetValue(ctx EvaluateCtx, l, r *Primitive) *Primitive {
 	if r.IsNil() {
-		return &Primitive{
-			Typ:   BOOL,
-			Value: false,
-		}
+		return BoolFalse
 	}
 	for _, elem := range r.Value.([]*Primitive) {
 		if l.Equal(elem, ctx) {
-			return &Primitive{
-				Typ:   BOOL,
-				Value: true,
-			}
+			return BoolTrue
 		}
 	}
-	return &Primitive{
-		Typ:   BOOL,
-		Value: false,
-	}
+	return BoolFalse
 }
 
 func (p *BinaryOperationExpr) Evaluate(ctx EvaluateCtx) (*Primitive, error) {
@@ -242,6 +287,11 @@ func (p *BinaryOperationExpr) Evaluate(ctx EvaluateCtx) (*Primitive, error) {
 		lhs, rhs *Primitive
 		err      error
 	)
+
+	switch p.Op {
+	case AND_AND, OR_OR:
+		return getLogicalExprRetValue(ctx, p.Op, p.L, p.R)
+	}
 
 	if lhs, err = p.L.Evaluate(ctx); err != nil {
 		return nil, err
@@ -267,8 +317,6 @@ func (p *BinaryOperationExpr) Evaluate(ctx EvaluateCtx) (*Primitive, error) {
 		return getArithmeticRetValue(ctx, p.Op, defaultArithmeticEvalMap, lhs, rhs), nil
 	case EQ, NE, LT, LTE, GT, GTE:
 		return getConditionalExprRetValue(ctx, p.Op, defaultBoolEvalMap, lhs, rhs), nil
-	case AND_AND, OR_OR:
-		return getLogicalExprRetValue(ctx, p.Op, lhs, rhs), nil
 	case NULL_COALESCENCE:
 		return getNullishCoalescingOperationExprRetValue(ctx, lhs, rhs), nil
 	case BETWEEN:
@@ -345,7 +393,7 @@ func (p *ScalarFunction) Evaluate(ctx EvaluateCtx) (*Primitive, error) {
 		return ConvertNaiveToPrimitive(naiveRet), err
 	}
 
-	return &Primitive{Typ: NULL}, nil
+	return null, nil
 }
 
 type UnaryOperationExpr struct {
@@ -420,6 +468,7 @@ func (p *TernaryOperationExpr) Evaluate(ctx EvaluateCtx) (*Primitive, error) {
 				return nil, err
 			}
 		}
+		return v, nil
 	} else {
 		v, err = p.False.Evaluate(ctx)
 		if err != nil {
@@ -431,6 +480,7 @@ func (p *TernaryOperationExpr) Evaluate(ctx EvaluateCtx) (*Primitive, error) {
 				return nil, err
 			}
 		}
+		return v, nil
 	}
 
 	return nil, nil
@@ -500,6 +550,8 @@ func (p *Primitive) IsNil() bool {
 }
 
 var null = &Primitive{Typ: NULL}
+var BoolFalse = &Primitive{Typ: BOOL, Value: false}
+var BoolTrue = &Primitive{Typ: BOOL, Value: true}
 
 func (p *Primitive) Evaluate(ctx EvaluateCtx) (*Primitive, error) {
 	if p.Typ == VARIABLE {
