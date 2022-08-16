@@ -39,7 +39,7 @@ func MetaKey(namespace string) []byte {
 }
 
 //ColumnKey
-// key: m_t{tid}_c{tableName}
+// key: m_t{tid}_c{columnName}
 func ColumnKey(tid uint64, columnName string) []byte {
 	buf := make([]byte, 0, len(columnName)+len(mMetaPrefix)+len(tablePrefixSep)+len(columnPrefixSep)+8)
 	buf = append(buf, mMetaPrefix...)
