@@ -14,7 +14,15 @@
 
 package db
 
-import "github.com/casbin-mesh/neo/pkg/db/adapter"
+import (
+	"errors"
+	"github.com/casbin-mesh/neo/pkg/db/adapter"
+)
+
+var (
+	// ErrKeyNotFound is returned when key isn't found on a txn.Get.
+	ErrKeyNotFound = errors.New("Key not found")
+)
 
 type Item interface {
 	// KeyCopy returns a copy of the key of the item, writing it to dst slice.

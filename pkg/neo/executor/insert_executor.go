@@ -53,7 +53,14 @@ func (i *insertExecutor) Next(ctx context.Context, tuple *btuple.Modifier, rid *
 		return
 	}
 
-	// TODO: update index info
+	// insert indices
+	for _, index := range i.tableInfo.Indices {
+		if err = codec.IndexEntries(index, *tuple, *rid, func(key, value []byte) error {
+			return i.GetTxn().Set(key, value)
+		}); err != nil {
+			return false, err
+		}
+	}
 
 	return true, nil
 }

@@ -17,6 +17,8 @@ package codec
 import (
 	"github.com/casbin-mesh/neo/fb"
 	"github.com/casbin-mesh/neo/pkg/neo/model"
+	"github.com/casbin-mesh/neo/pkg/primitive"
+	"github.com/casbin-mesh/neo/pkg/primitive/btuple"
 	flatbuffers "github.com/google/flatbuffers/go"
 )
 
@@ -27,6 +29,45 @@ func IndexInfoKey(matcherId uint64) []byte {
 	buf = append(buf, indexPrefixSep...)
 	buf = appendUint64(buf, matcherId)
 	return buf
+}
+
+// PrimaryIndexEntryKey i{index_id}_{columnValue}}
+func PrimaryIndexEntryKey(indexId uint64, columnValue []byte) []byte {
+	buf := make([]byte, 0, 10+len(columnValue))
+	buf = append(buf, indexPrefix...)
+	buf = appendUint64(buf, indexId)
+	buf = append(buf, Sep...)
+	buf = append(buf, columnValue...)
+	return buf
+}
+
+// SecondaryIndexEntryKey i{index_id}_{index_column_value}_{r_id}
+func SecondaryIndexEntryKey(indexId uint64, columnValue []byte, rId []byte) []byte {
+	buf := make([]byte, 0, 19+len(columnValue))
+	buf = append(buf, indexPrefix...)
+	buf = appendUint64(buf, indexId)
+	buf = append(buf, Sep...)
+	buf = append(buf, columnValue...)
+	buf = append(buf, Sep...)
+	buf = append(buf, rId...)
+	return buf
+}
+
+func IndexEntries(index *model.IndexInfo, tuple btuple.Reader, rid primitive.ObjectID, iter func(key, value []byte) error) (err error) {
+	for _, column := range index.Columns {
+		var key, value []byte
+		columnValue := (tuple).ValueAt(column.Offset)
+		if index.Unique {
+			key = PrimaryIndexEntryKey(index.ID, columnValue)
+			value = rid[:]
+		} else {
+			key = SecondaryIndexEntryKey(index.ID, columnValue, rid[:])
+		}
+		if err = iter(key, value); err != nil {
+			return err
+		}
+	}
+	return
 }
 
 func EncodeIndexInfo(info *model.IndexInfo) []byte {
