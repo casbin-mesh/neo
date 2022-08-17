@@ -49,6 +49,7 @@ m = r.sub == p.sub && r.obj == p.obj && r.act == p.act`
 				},
 				Indices: []*model.IndexInfo{
 					{
+						// ID: 1
 						Name: model.CIStr{O: "subject_index", L: "subject_index"},
 						Columns: []*model.IndexColumn{
 							{

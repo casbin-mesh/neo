@@ -6,6 +6,7 @@ The directory contains Neo design documents intended to help contributors to und
 - Architecture Design
 - [Codec](./codec.md)
 - [Executor](./executor.md)
+- [Index](./index.md)
 
 
 ## Contribution

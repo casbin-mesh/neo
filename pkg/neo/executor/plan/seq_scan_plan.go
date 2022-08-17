@@ -17,6 +17,7 @@ type seqScanPlan struct {
 	predicate expression.AbstractExpression
 	tableOid  uint64
 	dbOid     uint64
+	//TODO(weny): add scan prefix here
 }
 
 func (s seqScanPlan) TableOid() uint64 {
