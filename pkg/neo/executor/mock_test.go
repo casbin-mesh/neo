@@ -47,6 +47,35 @@ m = r.sub == p.sub && r.obj == p.obj && r.act == p.act`
 					O: "policy",
 					L: "policy",
 				},
+				Indices: []*model.IndexInfo{
+					{
+						Name: model.CIStr{O: "subject_index", L: "subject_index"},
+						Columns: []*model.IndexColumn{
+							{
+								ColName: model.CIStr{O: "subject", L: "subject"},
+								Offset:  0,
+							},
+						},
+					},
+					{
+						Name: model.CIStr{O: "object_index", L: "object_index"},
+						Columns: []*model.IndexColumn{
+							{
+								ColName: model.CIStr{O: "object", L: "object"},
+								Offset:  1,
+							},
+						},
+					},
+					{
+						Name: model.CIStr{O: "action_index", L: "action_index"},
+						Columns: []*model.IndexColumn{
+							{
+								ColName: model.CIStr{O: "action", L: "action"},
+								Offset:  2,
+							},
+						},
+					},
+				},
 				Columns: []*model.ColumnInfo{
 					{
 						// ID: 1,
@@ -54,6 +83,7 @@ m = r.sub == p.sub && r.obj == p.obj && r.act == p.act`
 							O: "subject",
 							L: "subject",
 						},
+						Offset: 0,
 					},
 					{
 						// ID: 2,
@@ -61,6 +91,7 @@ m = r.sub == p.sub && r.obj == p.obj && r.act == p.act`
 							O: "object",
 							L: "object",
 						},
+						Offset: 1,
 					},
 					{
 						// ID: 3,
@@ -68,6 +99,7 @@ m = r.sub == p.sub && r.obj == p.obj && r.act == p.act`
 							O: "action",
 							L: "action",
 						},
+						Offset: 3,
 					},
 					{
 						// ID: 4,
@@ -75,6 +107,7 @@ m = r.sub == p.sub && r.obj == p.obj && r.act == p.act`
 							O: "effect",
 							L: "effect",
 						},
+						Offset:          4,
 						DefaultValueBit: []byte("allow"),
 					},
 				},

@@ -43,7 +43,7 @@ func metaHelper(t *testing.T) (index index.Index[any], ts uint64) {
 
 	// duplicated namespace
 	_, err = meta.NewDb("test_namespace")
-	assert.Equal(t, ErrDbExists, err)
+	assert.Equal(t, "m_ntest_namespace already exists", err.Error())
 
 	// insert another namespace
 	id, err = meta.NewDb("test_namespace_2")
@@ -72,7 +72,7 @@ func TestInMemMeta_NewDb(t *testing.T) {
 
 	// duplicated namespace
 	_, err = meta.NewDb("test_namespace")
-	assert.Equal(t, ErrDbExists, err)
+	assert.Equal(t, "m_ntest_namespace already exists", err.Error())
 
 	// insert another namespace
 	id, err = meta.NewDb("test_namespace_2")

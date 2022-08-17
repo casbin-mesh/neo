@@ -17,6 +17,7 @@ package meta
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"github.com/casbin-mesh/neo/pkg/neo/codec"
 	"github.com/casbin-mesh/neo/pkg/neo/index"
 )
@@ -137,7 +138,7 @@ func (i *inMemMeta) newMeta(key []byte, idGen nextIdGen) (uint64, error) {
 
 	_, err := i.Get(key)
 	if !IsErrNotFound(err) {
-		return 0, ErrDbExists
+		return 0, fmt.Errorf("%s already exists", key)
 	}
 
 	if nextId, err = idGen(); err != nil {
