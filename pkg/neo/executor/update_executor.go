@@ -42,7 +42,15 @@ func (u *updateExecutor) Next(ctx context.Context, tuple *btuple.Modifier, rid *
 		); err != nil {
 			return
 		}
-		// TODO: update index info
+
+		// update indices
+		for _, index := range u.tableInfo.Indices {
+			if err = codec.IndexEntries(index, *tuple, *rid, func(key, value []byte) error {
+				return u.GetTxn().Set(key, value)
+			}); err != nil {
+				return false, err
+			}
+		}
 	}
 
 	return

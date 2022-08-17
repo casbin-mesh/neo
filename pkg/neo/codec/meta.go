@@ -18,7 +18,9 @@ var (
 	mMetaPrefix   = []byte("m")
 	mSchemaPrefix = []byte("s")
 	tablePrefix   = []byte("t")
+	indexPrefix   = []byte("i")
 
+	Sep                = []byte("_")
 	namespacePrefixSep = []byte("_n")
 	matcherPrefixSep   = []byte("_m")
 	tablePrefixSep     = []byte("_t")

@@ -2,6 +2,7 @@ package executor
 
 import (
 	"context"
+	"github.com/casbin-mesh/neo/pkg/db"
 	"github.com/casbin-mesh/neo/pkg/neo/codec"
 	"github.com/casbin-mesh/neo/pkg/neo/executor/plan"
 	"github.com/casbin-mesh/neo/pkg/neo/model"
@@ -37,7 +38,18 @@ func (d *deleteExecutor) Next(ctx context.Context, tuple *btuple.Modifier, rid *
 		}
 	}
 
-	// TODO: update index info
+	// delete index info
+	for _, index := range d.tableInfo.Indices {
+		if err = codec.IndexEntries(index, *tuple, *rid, func(key, value []byte) error {
+			e := d.GetTxn().Delete(key)
+			if e == db.ErrKeyNotFound {
+				return nil
+			}
+			return e
+		}); err != nil {
+			return false, err
+		}
+	}
 
 	return
 }

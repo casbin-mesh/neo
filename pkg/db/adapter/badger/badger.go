@@ -57,8 +57,12 @@ func (t txn) Set(k []byte, v []byte) error {
 	return t.txn.Set(k, v)
 }
 
-func (t txn) Delete(k []byte) error {
-	return t.txn.Delete(k)
+func (t txn) Delete(k []byte) (err error) {
+	err = t.txn.Delete(k)
+	if err == badger.ErrKeyNotFound {
+		return db.ErrKeyNotFound
+	}
+	return err
 }
 
 func (t txn) NewKeyIterator(key []byte, iterOpt adapter2.IteratorOptions) db.Iterator {
