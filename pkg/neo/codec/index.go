@@ -70,6 +70,29 @@ func IndexEntries(index *model.IndexInfo, tuple btuple.Reader, rid primitive.Obj
 	return
 }
 
+// ParseTupleRecordKeyFromSecondaryIndex parse r_id form i{index_id}_{index_column_value}_{r_id} form
+func ParseTupleRecordKeyFromSecondaryIndex(b []byte) (primitive.ObjectID, error) {
+	if len(b) < 19 {
+		return primitive.ObjectID{}, ErrInvalidKey
+	}
+	if b[len(b)-9] != '_' {
+		return primitive.ObjectID{}, ErrInvalidKey
+	}
+
+	data := [8]byte{}
+	copy(data[:], b[len(b)-8:])
+	return data, nil
+}
+
+func ParseTupleRecordKeyFromPrimaryIndex(b []byte) (primitive.ObjectID, error) {
+	if len(b) != 8 {
+		return primitive.ObjectID{}, ErrInvalidKey
+	}
+	data := [8]byte{}
+	copy(data[:], b[:])
+	return data, nil
+}
+
 func EncodeIndexInfo(info *model.IndexInfo) []byte {
 	builder := flatbuffers.NewBuilder(1024)
 	LName := builder.CreateString(info.Name.L)

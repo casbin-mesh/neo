@@ -50,7 +50,7 @@ func Execute(executor Executor, ctx context.Context) (result []btuple.Modifier, 
 		if !next {
 			break
 		}
-		if tuple != nil {
+		if tuple != nil || !rid.IsEmpty() {
 			result = append(result, tuple)
 			ids = append(ids, rid)
 		}

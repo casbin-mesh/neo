@@ -4,13 +4,14 @@ import (
 	"encoding/csv"
 	"github.com/casbin-mesh/neo/pkg/primitive/btuple"
 	"os"
+	"strings"
 )
 
 func recordsToTuples(src [][]string) (out []btuple.Modifier) {
-	for _, strings := range src {
-		elems := make([]btuple.Elem, 0, len(strings))
-		for _, s := range strings {
-			elems = append(elems, []byte(s))
+	for _, stringList := range src {
+		elems := make([]btuple.Elem, 0, len(stringList))
+		for _, s := range stringList {
+			elems = append(elems, []byte(strings.TrimSpace(s)))
 		}
 		out = append(out, btuple.NewModifier(elems))
 	}

@@ -44,6 +44,10 @@ func (b *executorBuilder) build(p plan.AbstractPlan) Executor {
 		return b.buildLimitPlan(v)
 	case plan.SchemaPlan:
 		return b.buildSchemaPlan(v)
+	case plan.IndexScanPlan:
+		return b.buildIndexScanPlan(v)
+	case plan.MultiIndexScan:
+		return b.buildMultiIndexScan(v)
 	default:
 		b.err = fmt.Errorf("unknown Plan %T", p)
 		return nil
@@ -118,6 +122,34 @@ func (b *executorBuilder) buildInsertPlan(p plan.InsertPlan) Executor {
 		return exec
 	}
 	exec, err := NewInsertExecutor(b.ctx, p, nil)
+	if b.catchErr(err) {
+		return nil
+	}
+	return exec
+}
+
+func (b *executorBuilder) buildIndexScanPlan(v plan.IndexScanPlan) Executor {
+	exec, err := NewIndexScanExecutor(b.ctx, v)
+	if b.catchErr(err) {
+		return nil
+	}
+	return exec
+}
+
+func (b *executorBuilder) buildMultiIndexScan(v plan.MultiIndexScan) Executor {
+	if len(v.GetChildren()) != 2 {
+		b.catchErr(ErrMissChildPlan)
+		return nil
+	}
+	leftExec, err := b.build(v.GetChildAt(0)), b.err
+	if err != nil {
+		return nil
+	}
+	rightExec, err := b.build(v.GetChildAt(1)), b.err
+	if err != nil {
+		return nil
+	}
+	exec, err := NewMultiIndexScanExecutor(b.ctx, v, leftExec, rightExec)
 	if b.catchErr(err) {
 		return nil
 	}
