@@ -39,22 +39,40 @@ func EncodeIndexInfo(info *model.IndexInfo) []byte {
 	fb.CIStrAddO(builder, OName)
 	name := fb.CIStrEnd(builder)
 
+	tableLName := builder.CreateString(info.Table.L)
+	tableOName := builder.CreateString(info.Table.O)
 	// table name
 	fb.CIStrStart(builder)
-	fb.CIStrAddL(builder, builder.CreateString(info.Table.L))
-	fb.CIStrAddO(builder, builder.CreateString(info.Table.O))
+	fb.CIStrAddL(builder, tableLName)
+	fb.CIStrAddO(builder, tableOName)
 	tableName := fb.CIStrEnd(builder)
 
-	fb.TableInfoStartColumnIdsVector(builder, len(info.Columns))
-	for _, column := range info.Columns {
+	colLNames := make([]flatbuffers.UOffsetT, len(info.Columns))
+	colONames := make([]flatbuffers.UOffsetT, len(info.Columns))
+	for i, column := range info.Columns {
+		colLNames[i] = builder.CreateString(column.ColName.L)
+		colONames[i] = builder.CreateString(column.ColName.O)
+	}
+
+	colNames := make([]flatbuffers.UOffsetT, len(info.Columns))
+	for i, _ := range info.Columns {
 		fb.CIStrStart(builder)
-		fb.CIStrAddL(builder, builder.CreateString(column.ColName.L))
-		fb.CIStrAddO(builder, builder.CreateString(column.ColName.O))
-		indexColName := fb.CIStrEnd(builder)
+		fb.CIStrAddL(builder, colLNames[i])
+		fb.CIStrAddO(builder, colONames[i])
+		colNames[i] = fb.CIStrEnd(builder)
+	}
+
+	indexColumns := make([]flatbuffers.UOffsetT, len(info.Columns))
+	for i, column := range info.Columns {
 		fb.IndexColumnStart(builder)
-		fb.IndexColumnAddName(builder, indexColName)
+		fb.IndexColumnAddName(builder, colNames[i])
 		fb.IndexColumnAddOffset(builder, int64(column.Offset))
-		builder.PrependUOffsetT(fb.IndexColumnEnd(builder))
+		indexColumns[i] = fb.IndexColumnEnd(builder)
+	}
+
+	fb.IndexInfoStartColumnsVector(builder, len(info.Columns))
+	for _, id := range indexColumns {
+		builder.PrependUOffsetT(id)
 	}
 	columns := builder.EndVector(len(info.Columns))
 

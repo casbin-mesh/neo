@@ -8,7 +8,8 @@ type IndexColumn struct {
 }
 
 func (i *IndexColumn) Clone() *IndexColumn {
-	return &*i
+	ni := *i
+	return &ni
 }
 
 type IndexInfo struct {
@@ -22,10 +23,10 @@ type IndexInfo struct {
 }
 
 func (i *IndexInfo) Clone() *IndexInfo {
-	ni := &*i
+	ni := *i
 	ni.Columns = make([]*IndexColumn, len(i.Columns))
 	for j, column := range i.Columns {
 		ni.Columns[j] = column.Clone()
 	}
-	return ni
+	return &ni
 }
