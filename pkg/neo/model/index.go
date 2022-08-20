@@ -22,6 +22,10 @@ type IndexInfo struct {
 	Tp      IndexType
 }
 
+func (i *IndexInfo) Leftmost() *IndexColumn {
+	return i.Columns[0]
+}
+
 func (i *IndexInfo) Clone() *IndexInfo {
 	ni := *i
 	ni.Columns = make([]*IndexColumn, len(i.Columns))

@@ -35,7 +35,10 @@ func (i *insertExecutor) Next(ctx context.Context, tuple *btuple.Modifier, rid *
 		if i.iter == i.insertPlan.RawValuesSize() { // end
 			return
 		}
-		curTuple := i.insertPlan.RawValues()[i.iter]
+		curTuple := btuple.NewModifierFromBytes(
+			codec.EncodeValues(i.insertPlan.RawValues()[i.iter]),
+		)
+
 		if err = curTuple.MergeDefaultValue(i.tableInfo); err != nil {
 			return false, err
 		}
@@ -55,9 +58,8 @@ func (i *insertExecutor) Next(ctx context.Context, tuple *btuple.Modifier, rid *
 
 	// insert indices
 	for _, index := range i.tableInfo.Indices {
-		if err = codec.IndexEntries(index, *tuple, *rid, func(key, value []byte) error {
-			return i.GetTxn().Set(key, value)
-		}); err != nil {
+		key, value := codec.IndexEntry(index, i.tableInfo.Columns, *tuple, *rid)
+		if err = i.GetTxn().Set(key, value); err != nil {
 			return false, err
 		}
 	}

@@ -2,23 +2,23 @@ package utils
 
 import (
 	"encoding/csv"
-	"github.com/casbin-mesh/neo/pkg/primitive/btuple"
+	"github.com/casbin-mesh/neo/pkg/primitive/value"
 	"os"
 	"strings"
 )
 
-func recordsToTuples(src [][]string) (out []btuple.Modifier) {
+func recordsToTuples(src [][]string) (out []value.Values) {
 	for _, stringList := range src {
-		elems := make([]btuple.Elem, 0, len(stringList))
+		elems := make([]value.Value, 0, len(stringList))
 		for _, s := range stringList {
-			elems = append(elems, []byte(strings.TrimSpace(s)))
+			elems = append(elems, value.NewStringValue(strings.TrimSpace(s)))
 		}
-		out = append(out, btuple.NewModifier(elems))
+		out = append(out, elems)
 	}
 	return
 }
 
-func CsvToTuples(path string) ([]btuple.Modifier, error) {
+func CsvToTuples(path string) ([]value.Values, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err

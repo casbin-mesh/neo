@@ -2,6 +2,7 @@ package executor
 
 import (
 	"context"
+	"github.com/casbin-mesh/neo/pkg/db"
 	"github.com/casbin-mesh/neo/pkg/neo/codec"
 	"github.com/casbin-mesh/neo/pkg/neo/executor/plan"
 	"github.com/casbin-mesh/neo/pkg/neo/model"
@@ -32,6 +33,21 @@ func (u *updateExecutor) Next(ctx context.Context, tuple *btuple.Modifier, rid *
 	}
 
 	for cond() {
+
+		// remove old indices
+		for i, _ := range u.tableInfo.Columns {
+			for _, index := range u.tableInfo.Indices {
+				if index.Leftmost().Offset == i {
+					key := codec.IndexEntryKey(index, u.tableInfo.Columns, *tuple, *rid)
+					if err = u.GetTxn().Delete(key); err != nil {
+						if err != db.ErrKeyNotFound {
+							return false, err
+						}
+					}
+				}
+			}
+		}
+
 		u.GenerateUpdateTuple(tuple)
 
 		if err = u.GetTxn().Set(
@@ -45,9 +61,8 @@ func (u *updateExecutor) Next(ctx context.Context, tuple *btuple.Modifier, rid *
 
 		// update indices
 		for _, index := range u.tableInfo.Indices {
-			if err = codec.IndexEntries(index, *tuple, *rid, func(key, value []byte) error {
-				return u.GetTxn().Set(key, value)
-			}); err != nil {
+			key, value := codec.IndexEntry(index, u.tableInfo.Columns, *tuple, *rid)
+			if err = u.GetTxn().Set(key, value); err != nil {
 				return false, err
 			}
 		}
@@ -62,7 +77,7 @@ func (u *updateExecutor) GenerateUpdateTuple(b *btuple.Modifier) {
 		if modifier, ok := updateAttrs[i]; ok {
 			switch modifier.Type() {
 			case plan.ModifierSet:
-				(*b).Set(i, modifier.Value().([]byte))
+				(*b).Set(i, codec.EncodeValue(modifier.Value()))
 			}
 		}
 	}

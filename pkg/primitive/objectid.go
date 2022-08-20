@@ -27,6 +27,10 @@ type ObjectID [8]byte
 
 var objectIDCounter = readRandomUint32()
 
+func (o ObjectID) Bytes() []byte {
+	return o[:]
+}
+
 func (o ObjectID) IsEmpty() bool {
 	v := binary.BigEndian.Uint64(o[:])
 	return v&^uint64(0) == 0

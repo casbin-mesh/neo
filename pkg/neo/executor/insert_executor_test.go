@@ -40,7 +40,7 @@ func TestInsertExecutor(t *testing.T) {
 	assert.Equal(t, len(result), len(mockDBDataSet))
 	assert.Equal(t, len(ids), len(mockDBDataSet))
 
-	expected := CloneTupleSet(mockDBDataSet)
+	expected := ConvertValuesToTupleSet(mockDBDataSet)
 	MergeDefaultValue(expected, mockDBInfo1.TableInfo[0])
 
 	TuplesAsserter(t, expected, result)

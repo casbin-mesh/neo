@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/casbin-mesh/neo/pkg/db"
 	badgerAdapter "github.com/casbin-mesh/neo/pkg/db/adapter/badger"
+	"github.com/casbin-mesh/neo/pkg/neo/codec"
 	"github.com/casbin-mesh/neo/pkg/neo/executor/plan"
 	"github.com/casbin-mesh/neo/pkg/neo/index"
 	"github.com/casbin-mesh/neo/pkg/neo/meta"
@@ -12,7 +13,9 @@ import (
 	"github.com/casbin-mesh/neo/pkg/neo/session"
 	"github.com/casbin-mesh/neo/pkg/primitive"
 	"github.com/casbin-mesh/neo/pkg/primitive/bschema"
+	"github.com/casbin-mesh/neo/pkg/primitive/bsontype"
 	"github.com/casbin-mesh/neo/pkg/primitive/btuple"
+	"github.com/casbin-mesh/neo/pkg/primitive/value"
 	"github.com/casbin-mesh/neo/pkg/utils"
 	"github.com/dgraph-io/badger/v3"
 	"github.com/dgraph-io/badger/v3/y"
@@ -49,7 +52,6 @@ m = r.sub == p.sub && r.obj == p.obj && r.act == p.act`
 				},
 				Indices: []*model.IndexInfo{
 					{
-						// ID: 1
 						Name: model.CIStr{O: "subject_index", L: "subject_index"},
 						Columns: []*model.IndexColumn{
 							{
@@ -85,6 +87,7 @@ m = r.sub == p.sub && r.obj == p.obj && r.act == p.act`
 							L: "subject",
 						},
 						Offset: 0,
+						Tp:     bsontype.String,
 					},
 					{
 						// ID: 2,
@@ -93,6 +96,7 @@ m = r.sub == p.sub && r.obj == p.obj && r.act == p.act`
 							L: "object",
 						},
 						Offset: 1,
+						Tp:     bsontype.String,
 					},
 					{
 						// ID: 3,
@@ -101,6 +105,7 @@ m = r.sub == p.sub && r.obj == p.obj && r.act == p.act`
 							L: "action",
 						},
 						Offset: 3,
+						Tp:     bsontype.String,
 					},
 					{
 						// ID: 4,
@@ -109,6 +114,7 @@ m = r.sub == p.sub && r.obj == p.obj && r.act == p.act`
 							L: "effect",
 						},
 						Offset:          4,
+						Tp:              bsontype.String,
 						DefaultValueBit: []byte("allow"),
 					},
 				},
@@ -126,6 +132,7 @@ m = r.sub == p.sub && r.obj == p.obj && r.act == p.act`
 							O: "member",
 							L: "member",
 						},
+						Tp: bsontype.String,
 					},
 					{
 						// ID: 6,
@@ -133,6 +140,7 @@ m = r.sub == p.sub && r.obj == p.obj && r.act == p.act`
 							O: "group",
 							L: "group",
 						},
+						Tp: bsontype.String,
 					},
 					{
 						// ID: 7,
@@ -141,6 +149,7 @@ m = r.sub == p.sub && r.obj == p.obj && r.act == p.act`
 							L: "domain",
 						},
 						DefaultValueBit: []byte("default"),
+						Tp:              bsontype.String,
 					},
 				},
 			},
@@ -156,7 +165,7 @@ m = r.sub == p.sub && r.obj == p.obj && r.act == p.act`
 			},
 		},
 	}
-	mockDBDataSet []btuple.Modifier
+	mockDBDataSet []value.Values
 )
 
 func IdsAsserter(t *testing.T, expected []primitive.ObjectID, got []primitive.ObjectID) {
@@ -173,9 +182,21 @@ func TuplesAsserter(t *testing.T, expected []btuple.Modifier, got []btuple.Modif
 	}
 }
 
+func ConvertValuesToTupleSet(set []value.Values) (output []btuple.Modifier) {
+	for _, values := range set {
+		var elems []btuple.Elem
+		for _, v := range values {
+			elems = append(elems, codec.EncodeValue(v))
+		}
+		mo := btuple.NewModifier(elems)
+		output = append(output, mo)
+	}
+	return
+}
+
 func CloneTupleSet(set []btuple.Modifier) (output []btuple.Modifier) {
-	for _, modifier := range set {
-		output = append(output, modifier.Clone())
+	for _, mo := range set {
+		output = append(output, mo.Clone())
 	}
 	return
 }
@@ -186,7 +207,7 @@ func UpdateValue(set []btuple.Modifier, schema bschema.Reader, updateAttrs map[i
 			if m, ok := updateAttrs[i]; ok {
 				switch m.Type() {
 				case plan.ModifierSet:
-					s.Set(i, m.Value().([]byte))
+					s.Set(i, codec.EncodeValue(m.Value()))
 				}
 			}
 		}
@@ -260,7 +281,7 @@ func (db *mockDB) CreateDB(t *testing.T, sc session.Context, info *model.DBInfo)
 	assert.Nil(t, err)
 }
 
-func (db *mockDB) InsertTuples(t *testing.T, sc session.Context, dbOid, tableOid uint64, tuples []btuple.Modifier) (result []btuple.Modifier, ids []primitive.ObjectID, err error) {
+func (db *mockDB) InsertTuples(t *testing.T, sc session.Context, dbOid, tableOid uint64, tuples []value.Values) (result []btuple.Modifier, ids []primitive.ObjectID, err error) {
 	builder := executorBuilder{ctx: sc}
 	executor := builder.Build(plan.NewRawInsertPlan(tuples, dbOid, tableOid))
 	assert.Nil(t, builder.Error())

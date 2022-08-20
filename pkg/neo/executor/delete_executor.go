@@ -40,14 +40,11 @@ func (d *deleteExecutor) Next(ctx context.Context, tuple *btuple.Modifier, rid *
 
 	// delete index info
 	for _, index := range d.tableInfo.Indices {
-		if err = codec.IndexEntries(index, *tuple, *rid, func(key, value []byte) error {
-			e := d.GetTxn().Delete(key)
-			if e == db.ErrKeyNotFound {
-				return nil
+		key := codec.IndexEntryKey(index, d.tableInfo.Columns, *tuple, *rid)
+		if err = d.GetTxn().Delete(key); err != nil {
+			if err != db.ErrKeyNotFound {
+				return false, err
 			}
-			return e
-		}); err != nil {
-			return false, err
 		}
 	}
 

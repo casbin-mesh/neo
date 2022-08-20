@@ -3,6 +3,7 @@ package executor
 import (
 	"context"
 	"github.com/casbin-mesh/neo/pkg/neo/executor/plan"
+	"github.com/casbin-mesh/neo/pkg/primitive/value"
 	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
@@ -30,7 +31,7 @@ func TestNewUpdateExecutor(t *testing.T) {
 	assert.Nil(t, err)
 
 	updateAttrs := map[int]plan.Modifier{}
-	updateAttrs[3] = plan.NewModifier(plan.ModifierSet, []byte("deny"))
+	updateAttrs[3] = plan.NewModifier(plan.ModifierSet, value.NewStringValue("deny"))
 
 	builder := executorBuilder{ctx: sc}
 	exec, err := builder.Build(
