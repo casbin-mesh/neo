@@ -1,5 +1,7 @@
 package plan
 
+import "github.com/casbin-mesh/neo/pkg/primitive/value"
+
 type UpdateType byte
 
 const (
@@ -7,16 +9,16 @@ const (
 )
 
 type Modifier interface {
-	Value() interface{}
+	Value() value.Value
 	Type() UpdateType
 }
 
 type modifier struct {
 	typ   UpdateType
-	value interface{}
+	value value.Value
 }
 
-func (m modifier) Value() interface{} {
+func (m modifier) Value() value.Value {
 	return m.value
 }
 
@@ -24,7 +26,7 @@ func (m modifier) Type() UpdateType {
 	return m.typ
 }
 
-func NewModifier(typ UpdateType, value interface{}) Modifier {
+func NewModifier(typ UpdateType, value value.Value) Modifier {
 	return &modifier{typ, value}
 }
 

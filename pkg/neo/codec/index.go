@@ -31,7 +31,7 @@ func IndexInfoKey(matcherId uint64) []byte {
 	return buf
 }
 
-// PrimaryIndexEntryKey i{index_id}_{columnValue}}
+// PrimaryIndexEntryKey i{index_id}_{columns_value}}
 func PrimaryIndexEntryKey(indexId uint64, columnValue []byte) []byte {
 	buf := make([]byte, 0, 10+len(columnValue))
 	buf = append(buf, indexPrefix...)
@@ -41,7 +41,7 @@ func PrimaryIndexEntryKey(indexId uint64, columnValue []byte) []byte {
 	return buf
 }
 
-// SecondaryIndexEntryKey i{index_id}_{index_column_value}_{r_id}
+// SecondaryIndexEntryKey i{index_id}_{leftmost_column_value}_{r_id}
 func SecondaryIndexEntryKey(indexId uint64, columnValue []byte, rId []byte) []byte {
 	buf := make([]byte, 0, 19+len(columnValue))
 	buf = append(buf, indexPrefix...)
@@ -51,6 +51,32 @@ func SecondaryIndexEntryKey(indexId uint64, columnValue []byte, rId []byte) []by
 	buf = append(buf, Sep...)
 	buf = append(buf, rId...)
 	return buf
+}
+
+func IndexEntryKey(indexInfo *model.IndexInfo, columns []*model.ColumnInfo, tuple btuple.Reader, rid primitive.ObjectID) []byte {
+	var (
+		leftmost []byte
+	)
+	index := indexInfo.Leftmost()
+	col := columns[index.Offset]
+	// retrieve actual value, then encode to mem-comparable format
+	leftmost = EncodeCmpValue(DecodeValue(tuple.ValueAt(index.Offset), col.Tp))
+	key := SecondaryIndexEntryKey(indexInfo.ID, leftmost, rid.Bytes())
+
+	return key
+}
+
+func IndexEntry(indexInfo *model.IndexInfo, columns []*model.ColumnInfo, tuple btuple.Reader, rid primitive.ObjectID) (key, value []byte) {
+
+	tupleBuilder := btuple.NewTupleBuilder(btuple.SmallValueType)
+
+	for _, index := range indexInfo.Columns {
+		tupleBuilder.Append(tuple.ValueAt(index.Offset))
+	}
+
+	key = IndexEntryKey(indexInfo, columns, tuple, rid)
+
+	return key, tupleBuilder.Encode()
 }
 
 func IndexEntries(index *model.IndexInfo, tuple btuple.Reader, rid primitive.ObjectID, iter func(key, value []byte) error) (err error) {

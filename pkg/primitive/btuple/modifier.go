@@ -69,3 +69,11 @@ func (m *modifier) Occupied(pos int) bool {
 func NewModifier(elems []Elem) Modifier {
 	return &modifier{elems: elems}
 }
+
+func NewModifierFromBytes(elems [][]byte) Modifier {
+	e := make([]Elem, len(elems))
+	for i, elem := range elems {
+		e[i] = elem
+	}
+	return &modifier{elems: e}
+}
