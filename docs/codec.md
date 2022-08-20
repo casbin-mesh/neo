@@ -52,8 +52,8 @@ Value: `r_id`
 ### Secondary(non-clustered) index Codec
 
 ```
-Key: `i{index_id}_{index_column_value}_{r_id}`
-Value: `nil`
+Key: `i{index_id}_{leftmost_column_value}_{r_id}`
+Value: `index_columns_value`
 ```
 
 Due to each `index_id` being unique in global, we can store info in the above keys.
