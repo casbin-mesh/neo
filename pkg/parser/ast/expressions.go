@@ -61,6 +61,8 @@ type EvaluateCtx interface {
 
 type Evaluable interface {
 	Evaluate(ctx EvaluateCtx) (*Primitive, error)
+	getChildAt(idx int) Evaluable
+	childrenLen() int
 }
 
 // BinaryOperationExpr is for binary operation like `1 + 1`, `1 - 1`, etc.
@@ -71,6 +73,19 @@ type BinaryOperationExpr struct {
 	L Evaluable
 	// R is the right expression in BinaryOperation.
 	R Evaluable
+}
+
+func (e *BinaryOperationExpr) getChildAt(idx int) Evaluable {
+	if idx == 0 {
+		return e.L
+	} else if idx == 1 {
+		return e.R
+	}
+	return nil
+}
+
+func (e *BinaryOperationExpr) childrenLen() int {
+	return 2
 }
 
 func hasType(typ Type, ps ...*Primitive) []int {
@@ -332,6 +347,14 @@ type RegexOperationExpr struct {
 	Pattern *regexp.Regexp
 }
 
+func (e *RegexOperationExpr) getChildAt(idx int) Evaluable {
+	return nil
+}
+
+func (e *RegexOperationExpr) childrenLen() int {
+	return 0
+}
+
 func (p *RegexOperationExpr) Evaluate(ctx EvaluateCtx) (*Primitive, error) {
 	if p.Typ == NRE {
 		return &Primitive{Typ: BOOL, Value: !p.Pattern.MatchString(p.Target)}, nil
@@ -342,6 +365,14 @@ func (p *RegexOperationExpr) Evaluate(ctx EvaluateCtx) (*Primitive, error) {
 type ScalarFunction struct {
 	Ident string
 	Args  []*Primitive
+}
+
+func (e *ScalarFunction) getChildAt(idx int) Evaluable {
+	return nil
+}
+
+func (e *ScalarFunction) childrenLen() int {
+	return 0
 }
 
 var (
@@ -401,6 +432,17 @@ type UnaryOperationExpr struct {
 	Op
 }
 
+func (e *UnaryOperationExpr) getChildAt(idx int) Evaluable {
+	if idx == 0 {
+		return e.Child
+	}
+	return nil
+}
+
+func (e *UnaryOperationExpr) childrenLen() int {
+	return 1
+}
+
 func (p *UnaryOperationExpr) Evaluate(ctx EvaluateCtx) (*Primitive, error) {
 	v, err := p.Child.Evaluate(ctx)
 	if err != nil {
@@ -437,6 +479,22 @@ type TernaryOperationExpr struct {
 	Cond  Evaluable
 	True  Evaluable
 	False Evaluable
+}
+
+func (e *TernaryOperationExpr) getChildAt(idx int) Evaluable {
+	switch idx {
+	case 0:
+		return e.Cond
+	case 1:
+		return e.False
+	case 2:
+		return e.False
+	}
+	return nil
+}
+
+func (e *TernaryOperationExpr) childrenLen() int {
+	return 3
 }
 
 func (p *TernaryOperationExpr) Evaluate(ctx EvaluateCtx) (*Primitive, error) {
@@ -490,6 +548,14 @@ type Primitive struct {
 	Typ   Type
 	Value interface{}
 	Text  string
+}
+
+func (e *Primitive) getChildAt(idx int) Evaluable {
+	return nil
+}
+
+func (e *Primitive) childrenLen() int {
+	return 0
 }
 
 // AsBool https://developer.mozilla.org/en-US/docs/Glossary/Truthy
