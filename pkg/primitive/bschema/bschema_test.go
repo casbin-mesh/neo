@@ -13,25 +13,3 @@
 // limitations under the License.
 
 package bschema
-
-import (
-	"github.com/stretchr/testify/assert"
-	"testing"
-)
-
-func TestBSchema_EncodeKey(t *testing.T) {
-	rw := NewReaderWriter([]byte("Hello"), []byte("p"))
-	dst := rw.EncodeKey()
-	assert.Equal(t, 8, len(dst))
-}
-
-func TestBSchema_DecodeKey(t *testing.T) {
-	rw := NewReaderWriter([]byte("Hello"), []byte("p"))
-	dst := rw.EncodeKey()
-	assert.Equal(t, 8, len(dst))
-
-	dec := readerWriter{}
-	dec.DecodeKey(dst)
-	assert.Equal(t, []byte("Hello"), dec.namespace)
-	assert.Equal(t, []byte("p"), dec.name)
-}

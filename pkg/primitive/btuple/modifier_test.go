@@ -20,7 +20,7 @@ func TestModifier_Delete(t *testing.T) {
 }
 
 func TestModifier_MergeDefaultValue(t *testing.T) {
-	rw := bschema.NewReaderWriter(nil, nil)
+	rw := bschema.NewReaderWriter()
 	rw.Append(bsontype.String, []byte("sub"), nil)
 	rw.Append(bsontype.String, []byte("obj"), nil)
 	rw.Append(bsontype.String, []byte("act"), nil)

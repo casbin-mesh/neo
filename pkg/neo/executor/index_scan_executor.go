@@ -17,42 +17,41 @@ type indexScanExecutor struct {
 	indexScanPlan plan.IndexScanPlan
 	tableInfo     *model.TableInfo
 	iter          db.Iterator
-	iterKey       []byte
 }
 
 func (i *indexScanExecutor) Init() {
 	i.iter = i.GetTxn().NewIterator(adapter.DefaultIteratorOptions)
 	i.iter.Seek(i.indexScanPlan.Prefix())
-	if i.iter.ValidForPrefix(i.indexScanPlan.Prefix()) {
-		i.iterKey = i.iter.Item().KeyCopy(nil)
-	}
 }
 
 func (i *indexScanExecutor) Next(ctx context.Context, tuple *btuple.Modifier, rid *primitive.ObjectID) (next bool, err error) {
-	if !i.iter.Valid() || !i.indexScanPlan.IsValid(i.iterKey) {
+	if !i.iter.ValidForPrefix(i.indexScanPlan.Prefix()) {
 		return
 	}
 
-	if i.indexScanPlan.PrimaryIndex() {
-		var rawVal []byte
-		if rawVal, err = i.iter.Item().ValueCopy(nil); err != nil {
-			return
-		}
-		if *rid, err = codec.ParseTupleRecordKeyFromPrimaryIndex(rawVal); err != nil {
-			return
-		}
-	} else {
-		if *rid, err = codec.ParseTupleRecordKeyFromSecondaryIndex(i.iterKey); err != nil {
-			return
-		}
+	rawKey := i.iter.Item().KeyCopy(nil)
+	if *rid, err = codec.ParseTupleRecordKeyFromSecondaryIndex(rawKey); err != nil {
+		return
 	}
 
-	if i.indexScanPlan.FetchTuple() {
-		// TODO(weny): add second scan
+	rawVal, err := i.iter.Item().ValueCopy(nil)
+	if err != nil {
+		return
 	}
+
+	tupleReader, err := btuple.NewReader(rawVal)
+	if err != nil {
+		return
+	}
+
+	*tuple = btuple.NewModifier(tupleReader.Values())
 
 	i.iter.Next()
-	i.iterKey = i.iter.Item().KeyCopy(nil)
+	predicate := i.indexScanPlan.Predicate()
+	if predicate != nil &&
+		!predicate.Evaluate(i.GetSessionCtx(), *tuple, i.indexScanPlan.OutputSchema()).(bool) {
+		return i.Next(ctx, tuple, rid)
+	}
 
 	return true, nil
 }
