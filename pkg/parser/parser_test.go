@@ -335,6 +335,29 @@ func TestComplexExprs(t *testing.T) {
 				},
 			},
 		},
+		{
+			parseStr: "g(r_sub, p_sub) && r_obj == p_obj && r_act == p_act",
+			expected: &ast.BinaryOperationExpr{
+				Op: ast.AND_AND,
+				L: &ast.BinaryOperationExpr{
+					Op: ast.AND_AND,
+					L: &ast.ScalarFunction{
+						Ident: "g",
+						Args:  []*ast.Primitive{{Typ: ast.VARIABLE, Value: "r_sub"}, {Typ: ast.VARIABLE, Value: "p_sub"}},
+					},
+					R: &ast.BinaryOperationExpr{
+						Op: ast.EQ,
+						L:  &ast.Primitive{Typ: ast.VARIABLE, Value: "r_obj"},
+						R:  &ast.Primitive{Typ: ast.VARIABLE, Value: "p_obj"},
+					},
+				},
+				R: &ast.BinaryOperationExpr{
+					Op: ast.EQ,
+					L:  &ast.Primitive{Typ: ast.VARIABLE, Value: "r_act"},
+					R:  &ast.Primitive{Typ: ast.VARIABLE, Value: "p_act"},
+				},
+			},
+		},
 	}
 	runTests(sets, t)
 }
