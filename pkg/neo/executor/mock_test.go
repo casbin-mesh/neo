@@ -253,7 +253,7 @@ func (db *mockDB) Close() error {
 	return db.db.Close()
 }
 
-func OpenMockDB(t *testing.T, path string) *mockDB {
+func OpenMockDB(t assert.TestingT, path string) *mockDB {
 	db, err := badgerAdapter.OpenManaged(badger.DefaultOptions(path))
 	assert.Nil(t, err)
 	metaIndex := index.New[any](index.Options{})
@@ -274,14 +274,14 @@ func (db *mockDB) WaitForMark(ctx context.Context, ts uint64) error {
 	return db.txnMark.WaitForMark(ctx, ts)
 }
 
-func (db *mockDB) CreateDB(t *testing.T, sc session.Context, info *model.DBInfo) {
+func (db *mockDB) CreateDB(t assert.TestingT, sc session.Context, info *model.DBInfo) {
 	exec := NewSchemaExec(sc, plan.NewCreateDBPlan(info))
 	exec.Init()
 	_, err := exec.Next(context.TODO(), nil, nil)
 	assert.Nil(t, err)
 }
 
-func (db *mockDB) InsertTuples(t *testing.T, sc session.Context, dbOid, tableOid uint64, tuples []value.Values) (result []btuple.Modifier, ids []primitive.ObjectID, err error) {
+func (db *mockDB) InsertTuples(t assert.TestingT, sc session.Context, dbOid, tableOid uint64, tuples []value.Values) (result []btuple.Modifier, ids []primitive.ObjectID, err error) {
 	builder := executorBuilder{ctx: sc}
 	executor := builder.Build(plan.NewRawInsertPlan(tuples, dbOid, tableOid))
 	assert.Nil(t, builder.Error())
@@ -340,7 +340,7 @@ func builderAsserter(infos ...*model.DBInfo) *asserter {
 	return a
 }
 
-func (a *asserter) Check(t *testing.T, sc session.Context) {
+func (a *asserter) Check(t assert.TestingT, sc session.Context) {
 	meta := sc.GetMetaReaderWriter()
 	for _, dbInfo := range a.dbs {
 		id, err := meta.GetDBId(dbInfo.Name.L)

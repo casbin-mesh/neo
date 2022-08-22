@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func setupMockDB(t *testing.T, mockDb *mockDB) {
+func setupMockDB(t assert.TestingT, mockDb *mockDB) {
 	sc := mockDb.NewTxnAt(1, true)
 	checker := builderAsserter(mockDBInfo1)
 	mockDb.CreateDB(t, sc, mockDBInfo1)
