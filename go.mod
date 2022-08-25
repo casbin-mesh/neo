@@ -3,6 +3,7 @@ module github.com/casbin-mesh/neo
 go 1.18
 
 require (
+	github.com/Knetic/govaluate v3.0.0+incompatible
 	github.com/dgraph-io/badger/v3 v3.2103.2
 	github.com/dgraph-io/ristretto v0.1.0
 	github.com/dshulyak/art v0.0.0-20200731100216-8869b840fedc

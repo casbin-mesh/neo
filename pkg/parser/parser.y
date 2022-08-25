@@ -70,7 +70,8 @@ expresions
 
 primary_expression
   : primitive 								{ $$ = $1 }
-  | '(' expresions ')'							{ $$ = &ast.Primitive{ Typ:ast.TUPLE, Value:$2 } }
+  | '[' expresions ']'							{ $$ = &ast.Primitive{ Typ:ast.TUPLE, Value:$2 } }
+  | '(' expression ')'							{ $$ = $2 }
   | '(' error ')'							{ $$ = &ast.Primitive{ Typ:ast.ERROR, Value:$2 } }
   ;
 
