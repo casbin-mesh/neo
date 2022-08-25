@@ -1,0 +1,64 @@
+/[ \t]/  { /* Skip blanks and tabs. */ }
+/in|IN/ { return IN_OP }
+/false|true|FALSE|TRUE/      { lval.b,_ = strconv.ParseBool(yylex.Text()); return BOOLEAN }
+
+/[0-9]+/                     { lval.i,_ = strconv.Atoi(yylex.Text()); return INT }
+
+/[0-9]+\.?[0-9]*/            { lval.f,_ = strconv.ParseFloat(yylex.Text(), 64); return FLOAT }
+
+/[A-Za-z_][A-Za-z0-9_]*/     { lval.s = yylex.Text(); return IDENTIFIER }
+
+/\"(\\.|[^\\"])*\"/          { lval.s = ast.RemoveStringQuote(yylex.Text()); return STRING_LITERAL; }
+/\`.*\`/                     { lval.s = ast.RemoveStringQuote(yylex.Text()); return STRING_LITERAL }
+/\'.*\'/                     { lval.s = ast.RemoveStringQuote(yylex.Text()); return STRING_LITERAL }
+
+/\(/   { return '('  }
+/\)/   { return ')' }
+/\[/   { return '[' }
+/\]/   { return ']' }
+
+/\-\-/   { return DEC_OP }
+/\+\+/   { return INC_OP }
+
+/\*\*/ { return EXP_OP }
+/\+/   { return '+' }
+/\-/   { return '-' }
+/\*/   { return '*' }
+/\//   { return '/' }
+/\%/   { return '%' }
+
+/\<</  { return LEFT_OP }
+/\>>/  { return RIGHT_OP }
+/\|/   { return '|' }
+/\&/   { return '&' }
+/\^/   { return '^' }
+/\!/   { return '!' }
+
+/\&&/  { return AND_OP }
+/\|\|/ { return OR_OP }
+/\?\?/ { return NULL_OP }
+
+/\?/  { return '?' }
+/\:/  { return ':' }
+
+/\>/ { return '>' }
+/\>=/ { return GE_OP }
+/\</ { return '<' }
+/\<=/ { return LE_OP }
+/\==/ { return EQ_OP }
+/\!=/ { return NE_OP }
+/=~/  { return RE_OP }
+/!~/  { return NR_OP }
+
+/,/  { return ',' }
+
+//
+package parser
+import (
+    "strconv"
+	"github.com/casbin-mesh/neo/pkg/expression/ast"
+)
+func main(){
+
+}
+
