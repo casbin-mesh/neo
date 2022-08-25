@@ -94,7 +94,7 @@ func TestPrimitives(t *testing.T) {
 			expected: &ast.Primitive{Typ: ast.IDENTIFIER, Value: "imVariable"},
 		},
 		{
-			parseStr: "(1,2,\"string\")",
+			parseStr: "[1,2,\"string\"]",
 			expected: &ast.Primitive{Typ: ast.TUPLE, Value: []ast.Evaluable{
 				&ast.Primitive{Typ: ast.INT, Value: 1},
 				&ast.Primitive{Typ: ast.INT, Value: 2},
@@ -251,7 +251,7 @@ func TestBinaryOperationExprs(t *testing.T) {
 		},
 		/* Between Operations */
 		{
-			parseStr: "1 in (1,2,3)",
+			parseStr: "1 in [1,2,3]",
 			expected: &ast.BinaryOperationExpr{
 				Op: ast.IN_OP,
 				L:  &ast.Primitive{Typ: ast.INT, Value: 1},
@@ -367,6 +367,44 @@ func TestComplexExprs(t *testing.T) {
 				Child: &ast.ScalarFunction{
 					Ident: &ast.Primitive{Typ: ast.IDENTIFIER, Value: "g"},
 					Args:  []ast.Evaluable{&ast.Primitive{Typ: ast.IDENTIFIER, Value: "r_sub"}, &ast.Primitive{Typ: ast.IDENTIFIER, Value: "p_sub"}},
+				},
+			},
+		},
+		{
+			parseStr: "!g(f(r_sub, p_sub))",
+			expected: &ast.UnaryOperationExpr{
+				Op: ast.UNOT,
+				Child: &ast.ScalarFunction{
+					Ident: &ast.Primitive{Typ: ast.IDENTIFIER, Value: "g"},
+					Args: []ast.Evaluable{
+						&ast.ScalarFunction{
+							Ident: &ast.Primitive{Typ: ast.IDENTIFIER, Value: "f"},
+							Args: []ast.Evaluable{
+								&ast.Primitive{Typ: ast.IDENTIFIER, Value: "r_sub"}, &ast.Primitive{Typ: ast.IDENTIFIER, Value: "p_sub"},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			parseStr: "!g(f(r_sub==p_sub))",
+			expected: &ast.UnaryOperationExpr{
+				Op: ast.UNOT,
+				Child: &ast.ScalarFunction{
+					Ident: &ast.Primitive{Typ: ast.IDENTIFIER, Value: "g"},
+					Args: []ast.Evaluable{
+						&ast.ScalarFunction{
+							Ident: &ast.Primitive{Typ: ast.IDENTIFIER, Value: "f"},
+							Args: []ast.Evaluable{
+								&ast.BinaryOperationExpr{
+									Op: ast.EQ_OP,
+									L:  &ast.Primitive{Typ: ast.IDENTIFIER, Value: "r_sub"},
+									R:  &ast.Primitive{Typ: ast.IDENTIFIER, Value: "p_sub"},
+								},
+							},
+						},
+					},
 				},
 			},
 		},

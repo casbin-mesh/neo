@@ -1,85 +1,56 @@
+// Copyright 2022 The casbin-neo Authors. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package ast
 
 type Parameter interface {
 	GetPrimitive() *Primitive
 }
 
-type Parameters interface {
-	Get(key string) interface{}
-}
-
-type Function interface {
-	Eval(args ...*Primitive) (*Primitive, error)
-}
-
-type NaiveFunction interface {
-	NaiveEval(args ...interface{}) (interface{}, error)
-}
-
 type FunctionWithCtx interface {
-	Eval(ctx EvaluateCtx, args ...*Primitive) (*Primitive, error)
+	Eval(ctx EvaluateCtx, args ...Evaluable) (*Primitive, error)
 }
 
-type NaiveFunctionWithCtx interface {
-	NaiveEval(ctx EvaluateCtx, args ...interface{}) (interface{}, error)
-}
-
-type Functions interface {
-	Get(key string) interface{}
-}
-
-type FunctionSet map[string]interface{}
-
-func (fs FunctionSet) Get(key string) interface{} {
-	return fs[key]
-}
-
-func (fs FunctionSet) AddFunction(k string, f Function) {
-	fs[k] = f
-}
-
-func (fs FunctionSet) AddFunctionWithCtx(k string, f FunctionWithCtx) {
-	fs[k] = f
-}
-
-func (fs FunctionSet) AddNaiveFunction(k string, f NaiveFunction) {
-	fs[k] = f
-}
-
-func (fs FunctionSet) AddNaiveFunctionWithCtx(k string, f NaiveFunctionWithCtx) {
-	fs[k] = f
-}
-
-type ParameterSet map[string]interface{}
-
-func (ps ParameterSet) Get(key string) interface{} {
-	return ps[key]
-}
-
-func (ps ParameterSet) AddNaiveParameter(k string, p interface{}) {
-	ps[k] = p
-}
-
-func (ps ParameterSet) AddParameter(k string, p Primitive) {
-	ps[k] = p
+type Variables struct {
+	funcIdentifier bool
 }
 
 type Context struct {
-	functions  FunctionSet
-	parameters ParameterSet
+	fc FirstClass
+	Variables
 }
 
-func (c Context) GetParameters() Parameters {
-	return c.parameters
+func (ctx *Context) GetVars() *Variables {
+	return &ctx.Variables
 }
 
-func (c Context) GetFunctions() Functions {
-	return c.functions
+type FirstClass map[string]interface{}
+
+func (ctx Context) Get(key string) interface{} {
+	return ctx.fc[key]
 }
 
-func NewContext() EvaluateCtx {
+func (ctx Context) AddFunctionWithCtx(k string, f FunctionWithCtx) {
+	ctx.fc[k] = f
+}
+
+func (ctx Context) AddParameter(k string, p Primitive) {
+	ctx.fc[k] = p
+}
+
+func NewContext() *Context {
 	return &Context{
-		functions:  make(FunctionSet),
-		parameters: make(ParameterSet),
+		fc: make(FirstClass),
 	}
 }
