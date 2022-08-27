@@ -77,9 +77,9 @@ primary_expression
 
 postfix_expression
   : primary_expression							{ $$ = $1 }
-  | postfix_expression '[' expression ']'				{ $$ = &ast.Accessor{ Typ:ast.OBJ_ACCESSOR, Ancestor:$1, Ident:$3 } }
+  | postfix_expression '[' expression ']'				{ $$ = &ast.Accessor{ Typ:ast.MEMBER_ACCESSOR, Ancestor:$1, Ident:$3 } }
   | postfix_expression '(' argument_expression_list ')'			{ $$ = &ast.ScalarFunction{ Ident: $1,Args:$3 } }
-  | postfix_expression '.' IDENTIFIER					{ $$ = &ast.Accessor{ Typ:ast.METHOD_ACCESSOR, Ancestor:$1, Ident:&ast.Primitive{ Typ:ast.STRING, Value:$3 } } }
+  | postfix_expression '.' IDENTIFIER					{ $$ = &ast.Accessor{ Typ:ast.MEMBER_ACCESSOR, Ancestor:$1, Ident:&ast.Primitive{ Typ:ast.IDENTIFIER, Value:$3 } } }
   | postfix_expression INC_OP						{ $$ = &ast.UnaryOperationExpr{ Op:ast.POST_INC_OP, Child:$1 } }
   | postfix_expression DEC_OP						{ $$ = &ast.UnaryOperationExpr{ Op:ast.POST_DEC_OP, Child:$1 } }
   ;

@@ -50,6 +50,7 @@
 /=~/  { return RE_OP }
 /!~/  { return NR_OP }
 
+/\./  { return '.' }
 /,/  { return ',' }
 
 //

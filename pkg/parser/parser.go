@@ -710,7 +710,7 @@ yydefault:
 		yyDollar = yyS[yypt-4 : yypt+1]
 //line parser.y:80
 		{
-			yyVAL.expr = &ast.Accessor{Typ: ast.OBJ_ACCESSOR, Ancestor: yyDollar[1].expr, Ident: yyDollar[3].expr}
+			yyVAL.expr = &ast.Accessor{Typ: ast.MEMBER_ACCESSOR, Ancestor: yyDollar[1].expr, Ident: yyDollar[3].expr}
 		}
 	case 16:
 		yyDollar = yyS[yypt-4 : yypt+1]
@@ -722,7 +722,7 @@ yydefault:
 		yyDollar = yyS[yypt-3 : yypt+1]
 //line parser.y:82
 		{
-			yyVAL.expr = &ast.Accessor{Typ: ast.METHOD_ACCESSOR, Ancestor: yyDollar[1].expr, Ident: &ast.Primitive{Typ: ast.STRING, Value: yyDollar[3].s}}
+			yyVAL.expr = &ast.Accessor{Typ: ast.MEMBER_ACCESSOR, Ancestor: yyDollar[1].expr, Ident: &ast.Primitive{Typ: ast.IDENTIFIER, Value: yyDollar[3].s}}
 		}
 	case 18:
 		yyDollar = yyS[yypt-2 : yypt+1]

@@ -49,7 +49,7 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 	yylex.ch_stop = make(chan bool, 1)
 	var scan func(in *bufio.Reader, ch chan frame, ch_stop chan bool, family []dfa, line, column int)
 	scan = func(in *bufio.Reader, ch chan frame, ch_stop chan bool, family []dfa, line, column int) {
-		// Index of DFA and length of highest-precedence match so far.
+		// index of DFA and length of highest-precedence match so far.
 		matchi, matchn := 0, -1
 		var buf []rune
 		n := 0
@@ -1917,6 +1917,24 @@ var dfas = []dfa{
 		},
 	}, []int{ /* Start-of-input transitions */ -1, -1, -1}, []int{ /* End-of-input transitions */ -1, -1, -1}, nil},
 
+	// \.
+	{[]bool{false, true}, []func(rune) int{ // Transitions
+		func(r rune) int {
+			switch r {
+			case 46:
+				return 1
+			}
+			return -1
+		},
+		func(r rune) int {
+			switch r {
+			case 46:
+				return -1
+			}
+			return -1
+		},
+	}, []int{ /* Start-of-input transitions */ -1, -1}, []int{ /* End-of-input transitions */ -1, -1}, nil},
+
 	// ,
 	{[]bool{false, true}, []func(rune) int{ // Transitions
 		func(r rune) int {
@@ -2165,6 +2183,10 @@ OUTER0:
 				return NR_OP
 			}
 		case 40:
+			{
+				return '.'
+			}
+		case 41:
 			{
 				return ','
 			}
