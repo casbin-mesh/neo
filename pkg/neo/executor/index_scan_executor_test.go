@@ -5,8 +5,13 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"github.com/casbin-mesh/neo/pkg/neo/executor/expression"
 	"github.com/casbin-mesh/neo/pkg/neo/executor/plan"
+	"github.com/casbin-mesh/neo/pkg/neo/model"
+	"github.com/casbin-mesh/neo/pkg/neo/session"
 	"github.com/casbin-mesh/neo/pkg/primitive"
+	"github.com/casbin-mesh/neo/pkg/primitive/bschema"
+	"github.com/casbin-mesh/neo/pkg/primitive/btuple"
 	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
@@ -38,11 +43,13 @@ func TestNewIndexScanExecutor(t *testing.T) {
 	binary.BigEndian.PutUint64(indexId[:], idxId)
 	// scan from
 	indexPrefix := []byte(fmt.Sprintf("i%s_%s", indexId, "bob"))
-	keyPrefix := []byte(fmt.Sprintf("i%s_%s", indexId, "bob"))
 
-	indexScanPlan := plan.NewIndexScanPlan(mockDBInfo1.TableInfo[0], false, false, indexPrefix, func(key []byte) bool {
-		return bytes.HasPrefix(key, keyPrefix)
-	}, 1, 1)
+	mockExpr := expression.MockExpr{Expr: func(ctx session.Context, tuple btuple.Reader, schema bschema.Reader) expression.Value {
+		// value in pos 0 is the most left column in index
+		return bytes.Compare(tuple.ValueAt(0), []byte("bob")) == 0
+	}}
+
+	indexScanPlan := plan.NewIndexScanPlan(model.NewIndexSchemaReader(mockDBInfo1.TableInfo[0], 0), indexPrefix, &mockExpr, 1, 1)
 	indexScan, err := builder.Build(indexScanPlan), builder.Error()
 	assert.Nil(t, err)
 

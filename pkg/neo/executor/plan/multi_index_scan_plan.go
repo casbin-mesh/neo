@@ -1,23 +1,32 @@
 package plan
 
-import "github.com/casbin-mesh/neo/pkg/primitive/bschema"
+import (
+	"github.com/casbin-mesh/neo/pkg/primitive/bschema"
+	"github.com/casbin-mesh/neo/pkg/primitive/utils"
+)
 
 type MultiIndexScan interface {
 	AbstractPlan
-	FetchTuple() bool
 	DBOid() uint64
 	TableOid() uint64
+	LeftOutputSchema() bschema.Reader
+	RightOutputSchema() bschema.Reader
 }
 
 type multiIndexPlan struct {
 	AbstractPlan
-	tableOid   uint64
-	dbOid      uint64
-	fetchTuple bool
+	left     bschema.Reader
+	right    bschema.Reader
+	tableOid uint64
+	dbOid    uint64
 }
 
-func (p multiIndexPlan) FetchTuple() bool {
-	return p.fetchTuple
+func (p multiIndexPlan) LeftOutputSchema() bschema.Reader {
+	return p.left
+}
+
+func (p multiIndexPlan) RightOutputSchema() bschema.Reader {
+	return p.right
 }
 
 func (p multiIndexPlan) TableOid() uint64 {
@@ -28,11 +37,15 @@ func (p multiIndexPlan) DBOid() uint64 {
 	return p.dbOid
 }
 
-func NewMultiIndexScan(children []AbstractPlan, schema bschema.Reader, fetchTuple bool, dbOid, tableOid uint64) MultiIndexScan {
+func NewMultiIndexScan(children []AbstractPlan, dbOid, tableOid uint64) MultiIndexScan {
 	return &multiIndexPlan{
-		AbstractPlan: NewAbstractPlan(schema, children),
-		fetchTuple:   fetchTuple,
-		tableOid:     tableOid,
-		dbOid:        dbOid,
+		//TODO: merge schema
+		AbstractPlan: NewAbstractPlan(
+			utils.MergeSchema(children[0].OutputSchema(), children[1].OutputSchema()),
+			children),
+		left:     children[0].OutputSchema(),
+		right:    children[1].OutputSchema(),
+		tableOid: tableOid,
+		dbOid:    dbOid,
 	}
 }
