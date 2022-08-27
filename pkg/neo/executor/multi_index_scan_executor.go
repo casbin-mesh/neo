@@ -7,6 +7,7 @@ import (
 	"github.com/casbin-mesh/neo/pkg/neo/session"
 	"github.com/casbin-mesh/neo/pkg/primitive"
 	"github.com/casbin-mesh/neo/pkg/primitive/btuple"
+	"github.com/casbin-mesh/neo/pkg/primitive/utils"
 )
 
 type multiIndexScanExecutor struct {
@@ -48,6 +49,30 @@ func (m *multiIndexScanExecutor) Init() {
 	m.hashMap = make(map[primitive.ObjectID]btuple.Modifier)
 }
 
+func (m *multiIndexScanExecutor) probe(ctx context.Context, tuple *btuple.Modifier, rid *primitive.ObjectID) (next bool, err error) {
+	var (
+		right btuple.Modifier
+	)
+	for {
+		if next, err = m.right.Next(ctx, &right, rid); err != nil {
+			return
+		}
+		if !next {
+			return
+		}
+		if _, ok := m.hashMap[*rid]; ok {
+			mo, _ := utils.MergeModifier(
+				m.hashMap[*rid],
+				m.multiIndexScanPlan.LeftOutputSchema(),
+				right,
+				m.multiIndexScanPlan.RightOutputSchema(),
+			)
+			*tuple = mo
+			return true, nil
+		}
+	}
+}
+
 func (m *multiIndexScanExecutor) Next(ctx context.Context, tuple *btuple.Modifier, rid *primitive.ObjectID) (next bool, err error) {
 	if !m.prepared {
 		if err = m.fetchAndBuildHashTable(ctx); err != nil {
@@ -56,18 +81,7 @@ func (m *multiIndexScanExecutor) Next(ctx context.Context, tuple *btuple.Modifie
 		m.prepared = true
 	}
 	// TODO: parallel probing
-	for {
-		if next, err = m.right.Next(ctx, tuple, rid); err != nil {
-			return
-		}
-		if !next {
-			return
-		}
-		if _, ok := m.hashMap[*rid]; ok {
-			// TODO: fetches tuple if need
-			return true, nil
-		}
-	}
+	return m.probe(ctx, tuple, rid)
 }
 
 func (m *multiIndexScanExecutor) Close() error {

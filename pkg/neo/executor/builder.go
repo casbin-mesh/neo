@@ -36,6 +36,8 @@ func (b *executorBuilder) build(p plan.AbstractPlan) Executor {
 		return b.buildInsertPlan(v)
 	case plan.UpdatePlan:
 		return b.buildUpdatePlan(v)
+	case plan.IndexScanPlan:
+		return b.buildIndexScanPlan(v)
 	case plan.SeqScanPlan:
 		return b.buildSeqScanPlan(v)
 	case plan.DeletePlan:
@@ -44,8 +46,6 @@ func (b *executorBuilder) build(p plan.AbstractPlan) Executor {
 		return b.buildLimitPlan(v)
 	case plan.SchemaPlan:
 		return b.buildSchemaPlan(v)
-	case plan.IndexScanPlan:
-		return b.buildIndexScanPlan(v)
 	case plan.MultiIndexScan:
 		return b.buildMultiIndexScan(v)
 	default:
