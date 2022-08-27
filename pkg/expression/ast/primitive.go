@@ -87,9 +87,8 @@ func (e ScalarFunction) GetMutChildAt(idx int) *Evaluable {
 	if idx == 0 {
 		return &e.Ident
 	} else {
-		// TODO:
-		panic("unsupported")
-		//return Args(e.Args)
+        var args Evaluable = Args(e.Args)
+        return &args
 	}
 }
 
