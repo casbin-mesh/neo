@@ -20,7 +20,27 @@ type TernaryOperationExpr struct {
 	False Evaluable
 }
 
-func (e *TernaryOperationExpr) getChildAt(idx int) Evaluable {
+func (e *TernaryOperationExpr) GetMutChildAt(idx int) *Evaluable {
+	switch idx {
+	case 0:
+		return &e.Cond
+	case 1:
+		return &e.False
+	case 2:
+		return &e.False
+	}
+	return nil
+}
+
+func (e *TernaryOperationExpr) Clone() Evaluable {
+	return &TernaryOperationExpr{
+		Cond:  e.Cond.Clone(),
+		True:  e.True.Clone(),
+		False: e.False.Clone(),
+	}
+}
+
+func (e *TernaryOperationExpr) GetChildAt(idx int) Evaluable {
 	switch idx {
 	case 0:
 		return e.Cond
@@ -32,7 +52,7 @@ func (e *TernaryOperationExpr) getChildAt(idx int) Evaluable {
 	return nil
 }
 
-func (e *TernaryOperationExpr) childrenLen() int {
+func (e *TernaryOperationExpr) ChildrenLen() int {
 	return 3
 }
 
@@ -47,7 +67,24 @@ type BinaryOperationExpr struct {
 	R Evaluable
 }
 
-func (e *BinaryOperationExpr) getChildAt(idx int) Evaluable {
+func (e *BinaryOperationExpr) GetMutChildAt(idx int) *Evaluable {
+	if idx == 0 {
+		return &e.L
+	} else if idx == 1 {
+		return &e.R
+	}
+	return nil
+}
+
+func (e *BinaryOperationExpr) Clone() Evaluable {
+	return &BinaryOperationExpr{
+		Op: e.Op,
+		L:  e.L.Clone(),
+		R:  e.R.Clone(),
+	}
+}
+
+func (e *BinaryOperationExpr) GetChildAt(idx int) Evaluable {
 	if idx == 0 {
 		return e.L
 	} else if idx == 1 {
@@ -56,7 +93,7 @@ func (e *BinaryOperationExpr) getChildAt(idx int) Evaluable {
 	return nil
 }
 
-func (e *BinaryOperationExpr) childrenLen() int {
+func (e *BinaryOperationExpr) ChildrenLen() int {
 	return 2
 }
 
@@ -123,14 +160,28 @@ type UnaryOperationExpr struct {
 	Op
 }
 
-func (e *UnaryOperationExpr) getChildAt(idx int) Evaluable {
+func (e *UnaryOperationExpr) GetMutChildAt(idx int) *Evaluable {
+	if idx == 0 {
+		return &e.Child
+	}
+	return nil
+}
+
+func (e *UnaryOperationExpr) Clone() Evaluable {
+	return &UnaryOperationExpr{
+		Op:    e.Op,
+		Child: e.Child.Clone(),
+	}
+}
+
+func (e *UnaryOperationExpr) GetChildAt(idx int) Evaluable {
 	if idx == 0 {
 		return e.Child
 	}
 	return nil
 }
 
-func (e *UnaryOperationExpr) childrenLen() int {
+func (e *UnaryOperationExpr) ChildrenLen() int {
 	return 1
 }
 

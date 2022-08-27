@@ -21,6 +21,10 @@ type EvaluateCtx interface {
 
 type Evaluable interface {
 	Evaluate(ctx EvaluateCtx) (*Primitive, error)
-	getChildAt(idx int) Evaluable
-	childrenLen() int
+	// GetChildAt returns am immutable ast.Evaluable
+	GetChildAt(idx int) Evaluable
+	// GetMutChildAt returns a mutable ref of ast.Evaluable
+	GetMutChildAt(idx int) *Evaluable
+	ChildrenLen() int
+	Clone() Evaluable
 }
