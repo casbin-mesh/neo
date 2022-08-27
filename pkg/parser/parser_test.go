@@ -411,3 +411,101 @@ func TestComplexExprs(t *testing.T) {
 	}
 	runTests(sets, t)
 }
+
+func TestAccessor(t *testing.T) {
+	sets := []TestSet{
+		{
+			parseStr: "r.obj == p.obj && r.act == p.act",
+			expected: &ast.BinaryOperationExpr{
+				Op: ast.AND_OP,
+				L: &ast.BinaryOperationExpr{
+					Op: ast.EQ_OP,
+					L: &ast.Accessor{
+						Typ:      ast.MEMBER_ACCESSOR,
+						Ancestor: &ast.Primitive{Typ: ast.IDENTIFIER, Value: "r"},
+						Ident:    &ast.Primitive{Typ: ast.IDENTIFIER, Value: "obj"},
+					},
+					R: &ast.Accessor{
+						Typ:      ast.MEMBER_ACCESSOR,
+						Ancestor: &ast.Primitive{Typ: ast.IDENTIFIER, Value: "p"},
+						Ident:    &ast.Primitive{Typ: ast.IDENTIFIER, Value: "obj"},
+					},
+				},
+				R: &ast.BinaryOperationExpr{
+					Op: ast.EQ_OP,
+					L: &ast.Accessor{
+						Typ:      ast.MEMBER_ACCESSOR,
+						Ancestor: &ast.Primitive{Typ: ast.IDENTIFIER, Value: "r"},
+						Ident:    &ast.Primitive{Typ: ast.IDENTIFIER, Value: "act"},
+					},
+					R: &ast.Accessor{
+						Typ:      ast.MEMBER_ACCESSOR,
+						Ancestor: &ast.Primitive{Typ: ast.IDENTIFIER, Value: "p"},
+						Ident:    &ast.Primitive{Typ: ast.IDENTIFIER, Value: "act"},
+					},
+				},
+			},
+		},
+		{
+			parseStr: "getReq().obj == getPolice().obj && getReq().act == getPolice().act",
+			expected: &ast.BinaryOperationExpr{
+				Op: ast.AND_OP,
+				L: &ast.BinaryOperationExpr{
+					Op: ast.EQ_OP,
+					L: &ast.Accessor{
+						Typ: ast.MEMBER_ACCESSOR,
+						Ancestor: &ast.ScalarFunction{
+							Ident: &ast.Primitive{Typ: ast.IDENTIFIER, Value: "getReq"},
+						},
+						Ident: &ast.Primitive{Typ: ast.IDENTIFIER, Value: "obj"},
+					},
+					R: &ast.Accessor{
+						Typ: ast.MEMBER_ACCESSOR,
+						Ancestor: &ast.ScalarFunction{
+							Ident: &ast.Primitive{Typ: ast.IDENTIFIER, Value: "getPolice"},
+						},
+						Ident: &ast.Primitive{Typ: ast.IDENTIFIER, Value: "obj"},
+					},
+				},
+				R: &ast.BinaryOperationExpr{
+					Op: ast.EQ_OP,
+					L: &ast.Accessor{
+						Typ: ast.MEMBER_ACCESSOR,
+						Ancestor: &ast.ScalarFunction{
+							Ident: &ast.Primitive{Typ: ast.IDENTIFIER, Value: "getReq"},
+						},
+						Ident: &ast.Primitive{Typ: ast.IDENTIFIER, Value: "act"},
+					},
+					R: &ast.Accessor{
+						Typ: ast.MEMBER_ACCESSOR,
+						Ancestor: &ast.ScalarFunction{
+							Ident: &ast.Primitive{Typ: ast.IDENTIFIER, Value: "getPolice"},
+						},
+						Ident: &ast.Primitive{Typ: ast.IDENTIFIER, Value: "act"},
+					},
+				},
+			},
+		},
+		{
+			parseStr: "r.sub == r.obj.Owner",
+			expected: &ast.BinaryOperationExpr{
+				Op: ast.EQ_OP,
+				L: &ast.Accessor{
+					Typ:      ast.MEMBER_ACCESSOR,
+					Ancestor: &ast.Primitive{Typ: ast.IDENTIFIER, Value: "r"},
+					Ident:    &ast.Primitive{Typ: ast.IDENTIFIER, Value: "sub"},
+				},
+				R: &ast.Accessor{
+					Typ: ast.MEMBER_ACCESSOR,
+					Ancestor: &ast.Accessor{
+						Typ:      ast.MEMBER_ACCESSOR,
+						Ancestor: &ast.Primitive{Typ: ast.IDENTIFIER, Value: "r"},
+						Ident:    &ast.Primitive{Typ: ast.IDENTIFIER, Value: "obj"},
+					},
+					Ident: &ast.Primitive{Typ: ast.IDENTIFIER, Value: "Owner"},
+				},
+			},
+		},
+	}
+	runTests(sets, t)
+}
