@@ -102,7 +102,7 @@ func TestAbstractExpression_Prune(t *testing.T) {
 		expectedPruned := parser.ParseFormString("r.obj == p.obj").(ast.Evaluable)
 		expectedRemained := parser.ParseFormString("r.sub == p.sub && r.act == p.act").(ast.Evaluable)
 
-		// prunes the leftmost subtree
+		// prunes the leftmost subtree's sibling
 		// remained expected:
 		// 			  			 AND
 		// 					/	   	   \
