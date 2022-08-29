@@ -11,6 +11,7 @@ require (
 	github.com/spaolacci/murmur3 v1.1.0
 	github.com/stretchr/testify v1.7.1
 	github.com/tidwall/btree v1.3.1
+	golang.org/x/exp v0.0.0-20220826144839-4cc3b17fd1f1
 )
 
 require (
@@ -28,6 +29,6 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	go.opencensus.io v0.22.5 // indirect
 	golang.org/x/net v0.0.0-20201021035429-f5854403a974 // indirect
-	golang.org/x/sys v0.0.0-20210124154548-22da62e12c0c // indirect
+	golang.org/x/sys v0.0.0-20220722155257-8c9f86f7a55f // indirect
 	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c // indirect
 )
