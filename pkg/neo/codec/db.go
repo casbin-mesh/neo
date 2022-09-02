@@ -37,16 +37,41 @@ func EncodeDBInfo(info *model.DBInfo) []byte {
 	for _, table := range info.TableInfo {
 		builder.PrependUint64(table.ID)
 	}
-	tableIds := builder.EndVector(len(info.MatcherInfo))
+	tableIds := builder.EndVector(len(info.TableInfo))
 
 	fb.DBInfoStart(builder)
 	fb.DBInfoAddId(builder, info.ID)
 	fb.DBInfoAddName(builder, name)
 	fb.DBInfoAddMatcherIds(builder, matcherIds)
-	fb.DBInfoAddMatcherIds(builder, tableIds)
 	fb.DBInfoAddTableIds(builder, tableIds)
 
 	orc := fb.DBInfoEnd(builder)
 	builder.Finish(orc)
 	return builder.FinishedBytes()
+}
+
+func DecodeBDInfo(buf []byte) *model.DBInfo {
+	dst := &model.DBInfo{}
+	fbInfo := fb.GetRootAsDBInfo(buf, 0)
+
+	// ID
+	dst.ID = fbInfo.Id()
+	// name
+	name := fbInfo.Name(nil)
+	dst.Name.L = string(name.L())
+	dst.Name.O = string(name.O())
+	// matcherIds
+	matcherLen := fbInfo.MatcherIdsLength()
+	dst.MatcherInfo = make([]*model.MatcherInfo, 0, matcherLen)
+	for i := matcherLen - 1; i >= 0; i-- {
+		dst.MatcherInfo = append(dst.MatcherInfo, &model.MatcherInfo{ID: fbInfo.MatcherIds(i)})
+	}
+	// tableIds
+	tableLen := fbInfo.TableIdsLength()
+	dst.TableInfo = make([]*model.TableInfo, 0, tableLen)
+	for i := tableLen - 1; i >= 0; i-- {
+		dst.TableInfo = append(dst.TableInfo, &model.TableInfo{ID: fbInfo.TableIds(i)})
+	}
+
+	return dst
 }

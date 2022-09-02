@@ -3,6 +3,7 @@ package codec
 import (
 	"encoding/binary"
 	"fmt"
+	"github.com/casbin-mesh/neo/pkg/neo/model"
 	"github.com/casbin-mesh/neo/pkg/primitive"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -29,4 +30,50 @@ func TestParseTupleRecordKeyFromSecondaryIndex(t *testing.T) {
 	oid, err := ParseTupleRecordKeyFromSecondaryIndex(key)
 	assert.Nil(t, err)
 	assert.Equal(t, bid, oid)
+}
+
+var (
+	mockIndexInfoData = &model.IndexInfo{
+		ID: 1,
+		Name: model.CIStr{
+			O: "SUB_INDEX",
+			L: "sub_index",
+		},
+		Table: model.CIStr{
+			O: "Sub",
+			L: "sub",
+		},
+		Columns: []*model.IndexColumn{
+			{
+				ColName: model.CIStr{
+					O: "Sub",
+					L: "sub",
+				},
+				Offset: 0,
+			},
+			{
+				ColName: model.CIStr{
+					O: "Act",
+					L: "act",
+				},
+				Offset: 2,
+			},
+			{
+				ColName: model.CIStr{
+					O: "Eft",
+					L: "Eft",
+				},
+				Offset: 2,
+			},
+		},
+		Unique:  false,
+		Primary: false,
+		Tp:      1,
+	}
+)
+
+func TestDecodeIndexInfo(t *testing.T) {
+	buf := EncodeIndexInfo(mockIndexInfoData)
+	decoded := DecodeIndexInfo(buf, nil)
+	assert.Equal(t, mockIndexInfoData, decoded)
 }

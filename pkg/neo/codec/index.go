@@ -171,10 +171,54 @@ func EncodeIndexInfo(info *model.IndexInfo) []byte {
 	fb.IndexInfoAddName(builder, name)
 	fb.IndexInfoAddTableName(builder, tableName)
 	fb.IndexInfoAddPrimary(builder, info.Primary)
+	fb.IndexInfoAddTp(builder, byte(info.Tp))
 	fb.IndexInfoAddUnique(builder, info.Unique)
 	fb.IndexInfoAddColumns(builder, columns)
 
 	orc := fb.IndexInfoEnd(builder)
 	builder.Finish(orc)
 	return builder.FinishedBytes()
+}
+
+func DecodeIndexInfo(buf []byte, dst *model.IndexInfo) *model.IndexInfo {
+	if dst == nil {
+		dst = &model.IndexInfo{}
+	}
+	fbInfo := fb.GetRootAsIndexInfo(buf, 0)
+
+	// ID
+	dst.ID = fbInfo.Id()
+	// name
+	name := fbInfo.Name(nil)
+	dst.Name.L = string(name.L())
+	dst.Name.O = string(name.O())
+	// table name
+	tableName := fbInfo.TableName(nil)
+	dst.Table.L = string(tableName.L())
+	dst.Table.O = string(tableName.O())
+	// index type
+	dst.Tp = model.IndexType(fbInfo.Tp())
+	// primary
+	dst.Primary = fbInfo.Primary()
+	// unique
+	dst.Unique = fbInfo.Unique()
+
+	// info columns
+	columnLen := fbInfo.ColumnsLength()
+	dst.Columns = make([]*model.IndexColumn, 0, columnLen)
+	for i := columnLen - 1; i >= 0; i-- {
+		info := new(fb.IndexColumn)
+		if fbInfo.Columns(info, i) {
+			colName := info.Name(nil)
+			dst.Columns = append(dst.Columns, &model.IndexColumn{
+				ColName: model.CIStr{
+					O: string(colName.O()),
+					L: string(colName.L()),
+				},
+				Offset: int(info.Offset()),
+			})
+		}
+	}
+
+	return dst
 }

@@ -72,3 +72,37 @@ func EncodeTableInfo(info *model.TableInfo) []byte {
 
 	return builder.FinishedBytes()
 }
+
+func DecodeTableInfo(buf []byte, dst *model.TableInfo) *model.TableInfo {
+	if dst == nil {
+		dst = &model.TableInfo{}
+	}
+	fbInfo := fb.GetRootAsTableInfo(buf, 0)
+
+	// ID
+	dst.ID = fbInfo.Id()
+	// name
+	name := fbInfo.Name(nil)
+	dst.Name.L = string(name.L())
+	dst.Name.O = string(name.O())
+	//columnIds
+	columnLen := fbInfo.ColumnIdsLength()
+	dst.Columns = make([]*model.ColumnInfo, 0, columnLen)
+	for i := columnLen - 1; i >= 0; i-- {
+		dst.Columns = append(dst.Columns, &model.ColumnInfo{ID: fbInfo.ColumnIds(i)})
+	}
+	//indexIds
+	indexLen := fbInfo.IndexIdsLength()
+	dst.Indices = make([]*model.IndexInfo, 0, indexLen)
+	for i := indexLen - 1; i >= 0; i-- {
+		dst.Indices = append(dst.Indices, &model.IndexInfo{ID: fbInfo.IndexIds(i)})
+	}
+	//fkInfoIds
+	fkInfoLen := fbInfo.ForeignKeyIdsLength()
+	dst.ForeignKeys = make([]*model.FKInfo, 0, fkInfoLen)
+	for i := fkInfoLen - 1; i >= 0; i-- {
+		dst.ForeignKeys = append(dst.ForeignKeys, &model.FKInfo{ID: fbInfo.ForeignKeyIds(i)})
+	}
+
+	return dst
+}
