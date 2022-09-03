@@ -3,6 +3,7 @@ package codec
 import (
 	"github.com/casbin-mesh/neo/fb"
 	"github.com/casbin-mesh/neo/pkg/neo/model"
+	"github.com/casbin-mesh/neo/pkg/primitive/bsontype"
 	flatbuffers "github.com/google/flatbuffers/go"
 )
 
@@ -38,4 +39,25 @@ func EncodeColumnInfo(info *model.ColumnInfo) []byte {
 	orc := fb.ColumnInfoEnd(builder)
 	builder.Finish(orc)
 	return builder.FinishedBytes()
+}
+
+func DecodeColumnInfo(buf []byte, dst *model.ColumnInfo) *model.ColumnInfo {
+	if dst == nil {
+		dst = &model.ColumnInfo{}
+	}
+	fbInfo := fb.GetRootAsColumnInfo(buf, 0)
+
+	// ID
+	dst.ID = fbInfo.Id()
+	// col name
+	name := fbInfo.Name(nil)
+	dst.ColName.L = string(name.L())
+	dst.ColName.O = string(name.O())
+	// type
+	dst.Tp = bsontype.Type(fbInfo.Tp())
+	// default value
+	dst.DefaultValueBit = fbInfo.DefaultValueBytes()
+	//offset
+	dst.Offset = int(fbInfo.Offset())
+	return dst
 }

@@ -45,8 +45,28 @@ func EncodeMatcherInfo(info *model.MatcherInfo) []byte {
 	fb.MatcherInfoAddId(builder, info.ID)
 	fb.MatcherInfoAddName(builder, name)
 	fb.MatcherInfoAddRaw(builder, raw)
+	fb.MatcherInfoAddPolicyEffect(builder, info.EffectPolicy)
 	orc := fb.MatcherInfoEnd(builder)
 	builder.Finish(orc)
 
 	return builder.FinishedBytes()
+}
+
+func DecodeMatcherInfo(buf []byte, dst *model.MatcherInfo) *model.MatcherInfo {
+	if dst == nil {
+		dst = &model.MatcherInfo{}
+	}
+	fbInfo := fb.GetRootAsMatcherInfo(buf, 0)
+
+	// ID
+	dst.ID = fbInfo.Id()
+	// name
+	name := fbInfo.Name(nil)
+	dst.Name.L = string(name.L())
+	dst.Name.O = string(name.O())
+	// raw
+	dst.Raw = string(fbInfo.Raw())
+	// policy_effect
+	dst.EffectPolicy = fbInfo.PolicyEffect()
+	return dst
 }
