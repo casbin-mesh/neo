@@ -3,7 +3,17 @@ package expression
 import (
 	"github.com/casbin-mesh/neo/pkg/expression/ast"
 	"github.com/casbin-mesh/neo/pkg/expression/iterator"
+	"github.com/casbin-mesh/neo/pkg/neo/executor/expression"
+	"github.com/casbin-mesh/neo/pkg/neo/session"
+	"github.com/casbin-mesh/neo/pkg/primitive/bschema"
+	"github.com/casbin-mesh/neo/pkg/primitive/btuple"
+	"github.com/casbin-mesh/neo/pkg/primitive/value"
 )
+
+type Expression interface {
+	Evaluate(ctx session.Context, tuple btuple.Reader, schema bschema.Reader) expression.Value
+	AccessorMembers() []string
+}
 
 type AbstractExpression struct {
 	base                  ast.Evaluable
@@ -26,6 +36,10 @@ func (a *AbstractExpression) AccessorMembers() []string {
 		a.initCachedAccessorMembers()
 	}
 	return a.cachedAccessorMembers
+}
+
+func (a *AbstractExpression) Evaluate(ctx session.Context, tuple btuple.Reader, schema bschema.Reader) expression.Value {
+	return value.Value{}
 }
 
 func GetAccessorMembers(root ast.Evaluable) []string {
@@ -73,4 +87,47 @@ func PruneSubtree(base ast.Evaluable, shouldBePruned func(evaluable ast.Evaluabl
 	}
 
 	return nil, base
+}
+
+// ConnectSubtree returns connected subtree
+func ConnectSubtree(left, right ast.Evaluable) ast.Evaluable {
+	return &ast.BinaryOperationExpr{Op: ast.AND_OP, L: left, R: right}
+}
+
+func flatSubtree(root ast.Evaluable, filter func(node ast.Evaluable) bool) (result []ast.Evaluable) {
+	iter := iterator.NewDfsIterator(root, &iterator.Option{Filter: filter})
+
+	for {
+		cur := iter.Next()
+		if cur == nil {
+			break
+		}
+		switch node := cur.(type) {
+		case *ast.Primitive, *ast.Accessor, *ast.UnaryOperationExpr, *ast.ScalarFunction, *ast.TernaryOperationExpr:
+			result = append(result, cur)
+		case *ast.BinaryOperationExpr:
+			// find a child node that not be filtered
+			if node.L != nil && !filter(node.L) {
+				result = append(result, node.L)
+			}
+			if node.R != nil && !filter(node.R) {
+				result = append(result, node.R)
+			}
+		}
+	}
+	return
+}
+
+func FlatAndSubtree(root ast.Evaluable) []ast.Evaluable {
+	return flatSubtree(root, func(node ast.Evaluable) bool {
+		n, ok := node.(*ast.BinaryOperationExpr)
+		return ok && n.Op == ast.AND_OP
+	})
+}
+
+func FlatOrSubtree(root ast.Evaluable) []ast.Evaluable {
+	return flatSubtree(root, func(node ast.Evaluable) bool {
+		n, ok := node.(*ast.BinaryOperationExpr)
+		return ok && n.Op == ast.OR_OP
+	})
 }

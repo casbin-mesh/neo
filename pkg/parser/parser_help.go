@@ -1,6 +1,9 @@
 package parser
 
-import "strings"
+import (
+	"github.com/casbin-mesh/neo/pkg/expression/ast"
+	"strings"
+)
 
 func Parse(lexer yyLexer) {
 	yyParse(lexer)
@@ -19,4 +22,10 @@ func ParseFormString(s string) interface{} {
 	l := NewLexer(strings.NewReader(s))
 	yyParse(l)
 	return GetParseResult(l)
+}
+
+func MustParseFormString(s string) ast.Evaluable {
+	l := NewLexer(strings.NewReader(s))
+	yyParse(l)
+	return GetParseResult(l).(ast.Evaluable)
 }

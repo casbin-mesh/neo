@@ -209,3 +209,119 @@ func TestAbstractExpression_Prune(t *testing.T) {
 	})
 
 }
+
+func TestFlatAndSubtree(t *testing.T) {
+	t.Run("and expr0", func(t *testing.T) {
+		tree := parser.MustParseFormString("A")
+		expected := []ast.Evaluable{
+			&ast.Primitive{Typ: ast.IDENTIFIER, Value: "A"},
+		}
+		result := FlatAndSubtree(tree)
+		assert.Equal(t, expected, result)
+	})
+	t.Run("A && B && C && D", func(t *testing.T) {
+		tree := parser.MustParseFormString("A && B && C && D")
+		expected := []ast.Evaluable{
+			&ast.Primitive{Typ: ast.IDENTIFIER, Value: "A"},
+			&ast.Primitive{Typ: ast.IDENTIFIER, Value: "B"},
+			&ast.Primitive{Typ: ast.IDENTIFIER, Value: "C"},
+			&ast.Primitive{Typ: ast.IDENTIFIER, Value: "D"},
+		}
+		result := FlatAndSubtree(tree)
+		slices.SortFunc(result, func(a, b ast.Evaluable) bool {
+			return strings.Compare(a.(*ast.Primitive).Value.(string), b.(*ast.Primitive).Value.(string)) < 0
+		})
+		assert.Equal(t, expected, result)
+	})
+	t.Run("A && B && C && D && E", func(t *testing.T) {
+		tree := parser.MustParseFormString("A && B && C && D && E")
+		expected := []ast.Evaluable{
+			&ast.Primitive{Typ: ast.IDENTIFIER, Value: "A"},
+			&ast.Primitive{Typ: ast.IDENTIFIER, Value: "B"},
+			&ast.Primitive{Typ: ast.IDENTIFIER, Value: "C"},
+			&ast.Primitive{Typ: ast.IDENTIFIER, Value: "D"},
+			&ast.Primitive{Typ: ast.IDENTIFIER, Value: "E"},
+		}
+		result := FlatAndSubtree(tree)
+		slices.SortFunc(result, func(a, b ast.Evaluable) bool {
+			return strings.Compare(a.(*ast.Primitive).Value.(string), b.(*ast.Primitive).Value.(string)) < 0
+		})
+		assert.Equal(t, expected, result)
+	})
+	t.Run("A && (B || D && E)", func(t *testing.T) {
+		tree := parser.MustParseFormString("A && (B || D && E)")
+		expected := []ast.Evaluable{
+			parser.MustParseFormString("A"),
+			parser.MustParseFormString("(B || D && E)"),
+		}
+		result := FlatAndSubtree(tree)
+		assert.Equal(t, expected, result)
+	})
+	t.Run("(A || !B || !C) && (!D || E ||F)", func(t *testing.T) {
+		tree := parser.MustParseFormString("(A || !B || !C) && (!D || E ||F)")
+		expected := []ast.Evaluable{
+			parser.MustParseFormString("(A || !B || !C)"),
+			parser.MustParseFormString("(!D || E ||F)"),
+		}
+		result := FlatAndSubtree(tree)
+		assert.Equal(t, expected, result)
+	})
+}
+
+func TestFlatOrSubtree(t *testing.T) {
+	t.Run("or expr0", func(t *testing.T) {
+		tree := parser.MustParseFormString("A")
+		expected := []ast.Evaluable{
+			&ast.Primitive{Typ: ast.IDENTIFIER, Value: "A"},
+		}
+		result := FlatOrSubtree(tree)
+		assert.Equal(t, expected, result)
+	})
+	t.Run("or expr1", func(t *testing.T) {
+		tree := parser.MustParseFormString("A || B || C || D")
+		expected := []ast.Evaluable{
+			&ast.Primitive{Typ: ast.IDENTIFIER, Value: "A"},
+			&ast.Primitive{Typ: ast.IDENTIFIER, Value: "B"},
+			&ast.Primitive{Typ: ast.IDENTIFIER, Value: "C"},
+			&ast.Primitive{Typ: ast.IDENTIFIER, Value: "D"},
+		}
+		result := FlatOrSubtree(tree)
+		slices.SortFunc(result, func(a, b ast.Evaluable) bool {
+			return strings.Compare(a.(*ast.Primitive).Value.(string), b.(*ast.Primitive).Value.(string)) < 0
+		})
+		assert.Equal(t, expected, result)
+	})
+	t.Run("or expr2", func(t *testing.T) {
+		tree := parser.MustParseFormString("A || B || C || D || E")
+		expected := []ast.Evaluable{
+			&ast.Primitive{Typ: ast.IDENTIFIER, Value: "A"},
+			&ast.Primitive{Typ: ast.IDENTIFIER, Value: "B"},
+			&ast.Primitive{Typ: ast.IDENTIFIER, Value: "C"},
+			&ast.Primitive{Typ: ast.IDENTIFIER, Value: "D"},
+			&ast.Primitive{Typ: ast.IDENTIFIER, Value: "E"},
+		}
+		result := FlatOrSubtree(tree)
+		slices.SortFunc(result, func(a, b ast.Evaluable) bool {
+			return strings.Compare(a.(*ast.Primitive).Value.(string), b.(*ast.Primitive).Value.(string)) < 0
+		})
+		assert.Equal(t, expected, result)
+	})
+	t.Run("or expr3", func(t *testing.T) {
+		tree := parser.MustParseFormString("A && B || C")
+		expected := []ast.Evaluable{
+			parser.MustParseFormString("A && B"),
+			parser.MustParseFormString("C"),
+		}
+		result := FlatOrSubtree(tree)
+		assert.Equal(t, expected, result)
+	})
+	t.Run("or expr3", func(t *testing.T) {
+		tree := parser.MustParseFormString("(A && !B && !C) || (!D && E && F)")
+		expected := []ast.Evaluable{
+			parser.MustParseFormString("(A && !B && !C)"),
+			parser.MustParseFormString("(!D && E && F)"),
+		}
+		result := FlatOrSubtree(tree)
+		assert.Equal(t, expected, result)
+	})
+}
