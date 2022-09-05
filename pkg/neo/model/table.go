@@ -1,6 +1,9 @@
 package model
 
-import "github.com/casbin-mesh/neo/pkg/primitive/bschema"
+import (
+	"github.com/casbin-mesh/neo/pkg/primitive/bschema"
+	"strings"
+)
 
 type TableInfo struct {
 	ID          uint64
@@ -8,6 +11,15 @@ type TableInfo struct {
 	Columns     []*ColumnInfo
 	Indices     []*IndexInfo
 	ForeignKeys []*FKInfo
+}
+
+func (t *TableInfo) Field(s string) int {
+	for i, col := range t.Columns {
+		if strings.Compare(col.ColName.L, s) == 0 {
+			return i
+		}
+	}
+	return -1
 }
 
 func (t *TableInfo) Clone() *TableInfo {

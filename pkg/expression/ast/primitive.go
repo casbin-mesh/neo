@@ -14,6 +14,8 @@
 
 package ast
 
+import "errors"
+
 type Error struct {
 	error
 }
@@ -43,6 +45,8 @@ type Accessor struct {
 	Typ      Type
 	Ancestor Evaluable
 	Ident    Evaluable
+	ancestor *Primitive
+	ident    *Primitive
 }
 
 func (e *Accessor) GetMutChildAt(idx int) *Evaluable {
@@ -73,9 +77,43 @@ func (e *Accessor) ChildrenLen() int {
 	return 2
 }
 
-func (a Accessor) Evaluate(ctx EvaluateCtx) (*Primitive, error) {
-	//TODO implement me
-	panic("implement me")
+var (
+	ErrUnknownAccessorMemberIdentType   = errors.New("unknown accessor member ident type")
+	ErrUnknownAccessorAncestorIdentType = errors.New("unknown accessor ancestor ident type")
+	ErrUnknownAccessorAncestorType      = errors.New("unknown accessor ancestor type")
+)
+
+func (a *Accessor) Evaluate(ctx EvaluateCtx) (*Primitive, error) {
+	if a.ancestor == nil {
+		ctx.GetVars().funcIdentifier = true
+		ancestor, err := a.Ancestor.Evaluate(ctx)
+		ctx.GetVars().funcIdentifier = false
+		if err != nil {
+			return nil, err
+		}
+		a.ancestor = ancestor
+		if ancestor.Typ != IDENTIFIER {
+			return nil, ErrUnknownAccessorAncestorIdentType
+		}
+	}
+	if a.ident == nil {
+		ctx.GetVars().funcIdentifier = true
+		ident, err := a.Ident.Evaluate(ctx)
+		ctx.GetVars().funcIdentifier = false
+		if err != nil {
+			return nil, err
+		}
+		a.ident = ident
+		if ident.Typ != IDENTIFIER {
+			return nil, ErrUnknownAccessorMemberIdentType
+		}
+	}
+	ancestor := ctx.Get(a.ancestor.Value.(string))
+	v, ok := ancestor.(AccessorValue)
+	if !ok {
+		return nil, ErrUnknownAccessorAncestorType
+	}
+	return v.GetMember(a.ident.Value.(string)), nil
 }
 
 type ScalarFunction struct {
@@ -87,8 +125,8 @@ func (e ScalarFunction) GetMutChildAt(idx int) *Evaluable {
 	if idx == 0 {
 		return &e.Ident
 	} else {
-        var args Evaluable = Args(e.Args)
-        return &args
+		var args Evaluable = Args(e.Args)
+		return &args
 	}
 }
 

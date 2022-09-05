@@ -291,7 +291,7 @@ func (db *mockDB) InsertTuples(t *testing.T, sc session.Context, dbOid, tableOid
 
 func (db *mockDB) SeqScan(t *testing.T, sc session.Context, dbOid, tableOid uint64, schema bschema.Reader) (result []btuple.Modifier, ids []primitive.ObjectID, err error) {
 	builder := executorBuilder{ctx: sc}
-	executor, err := builder.Build(plan.NewSeqScanPlan(schema, nil, dbOid, tableOid)), builder.Error()
+	executor, err := builder.Build(plan.NewSeqScanPlan(schema, nil, nil, dbOid, tableOid)), builder.Error()
 	assert.Nil(t, err)
 	result, ids, err = Execute(executor, context.TODO())
 	return

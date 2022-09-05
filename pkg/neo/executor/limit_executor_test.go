@@ -28,7 +28,7 @@ func TestNewLimitExecutor(t *testing.T) {
 	builder := executorBuilder{ctx: sc}
 	limit, err := builder.Build(
 		plan.NewLimitPlan([]plan.AbstractPlan{
-			plan.NewSeqScanPlan(mockDBInfo1.TableInfo[0], nil, 1, 1),
+			plan.NewSeqScanPlan(mockDBInfo1.TableInfo[0], nil, nil, 1, 1),
 		}, 10),
 	), builder.Error()
 
@@ -38,7 +38,7 @@ func TestNewLimitExecutor(t *testing.T) {
 	IdsAsserter(t, insertedIds, ids)
 	TuplesAsserter(t, inserted, result)
 
-	scan, err := NewSeqScanExecutor(sc, plan.NewSeqScanPlan(mockDBInfo1.TableInfo[0], nil, 1, 1))
+	scan, err := NewSeqScanExecutor(sc, plan.NewSeqScanPlan(mockDBInfo1.TableInfo[0], nil, nil, 1, 1))
 	assert.Nil(t, nil)
 
 	limit = NewLimitExecutor(sc, plan.NewLimitPlan(nil, 1), scan)

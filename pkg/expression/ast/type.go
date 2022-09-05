@@ -27,3 +27,21 @@ const (
 	IDENTIFIER
 	NULL
 )
+
+var (
+	typeToString = []string{
+		"BOOLEAN",
+		"INT",
+		"FLOAT",
+		"STRING",
+		"TUPLE",
+		"ERROR",
+		"MEMBER_ACCESSOR",
+		"IDENTIFIER",
+		"NULL",
+	}
+)
+
+func (t Type) String() string {
+	return typeToString[t]
+}
