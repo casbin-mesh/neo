@@ -5,6 +5,7 @@ import (
 	"github.com/casbin-mesh/neo/pkg/db"
 	"github.com/casbin-mesh/neo/pkg/db/adapter"
 	"github.com/casbin-mesh/neo/pkg/neo/codec"
+	"github.com/casbin-mesh/neo/pkg/neo/executor/expression"
 	"github.com/casbin-mesh/neo/pkg/neo/executor/plan"
 	"github.com/casbin-mesh/neo/pkg/neo/model"
 	"github.com/casbin-mesh/neo/pkg/neo/session"
@@ -60,9 +61,16 @@ func (s *seqScanExecutor) Next(ctx context.Context, tuple *btuple.Modifier, rid 
 	s.iter.Next()
 
 	predicate := s.seqScanPlan.Predicate()
-	if predicate != nil &&
-		!predicate.Evaluate(s.GetSessionCtx(), *tuple, s.seqScanPlan.OutputSchema()).(bool) {
-		return s.Next(ctx, tuple, rid)
+	if predicate != nil {
+		if res, err := predicate.Evaluate(s.GetSessionCtx(), s.seqScanPlan.GetEvalCtx(), *tuple, s.seqScanPlan.OutputSchema()); err == nil {
+			if value, err := expression.TryGetBool(res); err != nil {
+				return false, err
+			} else if !value {
+				return s.Next(ctx, tuple, rid)
+			}
+		} else {
+			return false, err
+		}
 	}
 
 	return true, nil

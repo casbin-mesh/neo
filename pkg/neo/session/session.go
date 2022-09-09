@@ -40,23 +40,23 @@ type ctx struct {
 	txnMark *y.WaterMark
 }
 
-func (c ctx) GetSchemaReaderWriter() schema.ReaderWriter {
+func (c *ctx) GetSchemaReaderWriter() schema.ReaderWriter {
 	return c.schema
 }
 
-func (c ctx) GetCatalog() catalog.Catalog {
+func (c *ctx) GetCatalog() catalog.Catalog {
 	return c.catalog
 }
 
-func (c ctx) GetTxn() db.Txn {
+func (c *ctx) GetTxn() db.Txn {
 	return c.txn
 }
 
-func (c ctx) GetMetaReaderWriter() meta.ReaderWriter {
+func (c *ctx) GetMetaReaderWriter() meta.ReaderWriter {
 	return c.meta
 }
 
-func (c ctx) CommitTxn(ctx context.Context, commitTs uint64) error {
+func (c *ctx) CommitTxn(ctx context.Context, commitTs uint64) error {
 	err := c.txn.CommitAt(commitTs, func(err error) {
 		if err != nil {
 			c.RollbackTxn(ctx)
@@ -71,7 +71,7 @@ func (c ctx) CommitTxn(ctx context.Context, commitTs uint64) error {
 	return err
 }
 
-func (c ctx) RollbackTxn(ctx context.Context) {
+func (c *ctx) RollbackTxn(ctx context.Context) {
 	c.txn.Discard()
 	c.meta.Rollback()
 	c.schema.Rollback()

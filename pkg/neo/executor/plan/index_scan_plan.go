@@ -1,16 +1,18 @@
 package plan
 
 import (
-	"github.com/casbin-mesh/neo/pkg/neo/executor/expression"
+	"github.com/casbin-mesh/neo/pkg/expression"
+	"github.com/casbin-mesh/neo/pkg/expression/ast"
 	"github.com/casbin-mesh/neo/pkg/primitive/bschema"
 )
 
 type IndexScanPlan interface {
 	AbstractPlan
-	Predicate() expression.AbstractExpression
+	Predicate() expression.Expression
 	DBOid() uint64
 	TableOid() uint64
 	Prefix() []byte
+	GetEvalCtx() ast.EvaluateCtx
 }
 
 type indexScanPlan struct {
@@ -18,14 +20,19 @@ type indexScanPlan struct {
 	tableOid  uint64
 	dbOid     uint64
 	prefix    []byte
-	predicate expression.AbstractExpression
+	predicate expression.Expression
+	ctx       ast.EvaluateCtx
+}
+
+func (s indexScanPlan) GetEvalCtx() ast.EvaluateCtx {
+	return s.ctx
 }
 
 func (s indexScanPlan) Prefix() []byte {
 	return s.prefix
 }
 
-func (s indexScanPlan) Predicate() expression.AbstractExpression {
+func (s indexScanPlan) Predicate() expression.Expression {
 	return s.predicate
 }
 
@@ -37,12 +44,13 @@ func (s indexScanPlan) DBOid() uint64 {
 	return s.dbOid
 }
 
-func NewIndexScanPlan(schema bschema.Reader, prefix []byte, predicate expression.AbstractExpression, dbOid, tableOid uint64) IndexScanPlan {
+func NewIndexScanPlan(schema bschema.Reader, prefix []byte, predicate expression.Expression, ctx ast.EvaluateCtx, dbOid, tableOid uint64) IndexScanPlan {
 	return &indexScanPlan{
 		AbstractPlan: NewAbstractPlan(schema, nil),
 		prefix:       prefix,
 		predicate:    predicate,
 		dbOid:        dbOid,
 		tableOid:     tableOid,
+		ctx:          ctx,
 	}
 }

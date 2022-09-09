@@ -5,13 +5,12 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
-	"github.com/casbin-mesh/neo/pkg/neo/executor/expression"
+	"github.com/casbin-mesh/neo/pkg/expression"
+	"github.com/casbin-mesh/neo/pkg/expression/ast"
 	"github.com/casbin-mesh/neo/pkg/neo/executor/plan"
 	"github.com/casbin-mesh/neo/pkg/neo/model"
-	"github.com/casbin-mesh/neo/pkg/neo/session"
+	"github.com/casbin-mesh/neo/pkg/parser"
 	"github.com/casbin-mesh/neo/pkg/primitive"
-	"github.com/casbin-mesh/neo/pkg/primitive/bschema"
-	"github.com/casbin-mesh/neo/pkg/primitive/btuple"
 	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
@@ -44,12 +43,11 @@ func TestNewIndexScanExecutor(t *testing.T) {
 	// scan from
 	indexPrefix := []byte(fmt.Sprintf("i%s_%s", indexId, "bob"))
 
-	mockExpr := expression.MockExpr{Expr: func(ctx session.Context, tuple btuple.Reader, schema bschema.Reader) expression.Value {
-		// value in pos 0 is the most left column in index
-		return bytes.Compare(tuple.ValueAt(0), []byte("bob")) == 0
-	}}
+	mockExpr, accessor := expression.NewExpression(parser.MustParseFromString("p.subject == \"bob\""))
+	ctx := ast.NewContext()
+	ctx.AddAccessor("p", accessor)
 
-	indexScanPlan := plan.NewIndexScanPlan(model.NewIndexSchemaReader(mockDBInfo1.TableInfo[0], 0), indexPrefix, &mockExpr, 1, 1)
+	indexScanPlan := plan.NewIndexScanPlan(model.NewIndexSchemaReader(mockDBInfo1.TableInfo[0], 0), indexPrefix, mockExpr, ctx, 1, 1)
 	indexScan, err := builder.Build(indexScanPlan), builder.Error()
 	assert.Nil(t, err)
 

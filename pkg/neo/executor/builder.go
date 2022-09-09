@@ -32,6 +32,7 @@ func (b *executorBuilder) Build(p plan.AbstractPlan) Executor {
 
 func (b *executorBuilder) build(p plan.AbstractPlan) Executor {
 	switch v := p.(type) {
+
 	case plan.InsertPlan:
 		return b.buildInsertPlan(v)
 	case plan.UpdatePlan:
@@ -48,6 +49,8 @@ func (b *executorBuilder) build(p plan.AbstractPlan) Executor {
 		return b.buildSchemaPlan(v)
 	case plan.MultiIndexScan:
 		return b.buildMultiIndexScan(v)
+	case plan.ConstPlan:
+		return b.buildConstPlan(v)
 	default:
 		b.err = fmt.Errorf("unknown Plan %T", p)
 		return nil
@@ -63,6 +66,10 @@ func (b *executorBuilder) catchErr(err error) bool {
 		b.err = err
 	}
 	return err != nil
+}
+
+func (b *executorBuilder) buildConstPlan(p plan.ConstPlan) Executor {
+	return NewConstExecutor(b.ctx, p)
 }
 
 func (b *executorBuilder) buildUpdatePlan(p plan.UpdatePlan) Executor {

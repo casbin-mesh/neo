@@ -7,7 +7,7 @@ import (
 
 // MergeModifier returns merged modifier, NOTES: returned modifier's elements reference elements from s1, s2
 func MergeModifier(m1 btuple.Modifier, s1 bschema.Reader, m2 btuple.Modifier, s2 bschema.Reader) (m btuple.Modifier, s bschema.ReaderWriter) {
-	s = bschema.NewReaderWriteFormReader(s1)
+	s = bschema.NewReaderWriteFromReader(s1)
 	elems := make([]btuple.Elem, 0, s.FieldsLen())
 
 	set := map[string]struct{}{}
@@ -19,7 +19,7 @@ func MergeModifier(m1 btuple.Modifier, s1 bschema.Reader, m2 btuple.Modifier, s2
 
 	for i := 0; i < s2.FieldsLen(); i++ {
 		if _, ok := set[string(s2.FieldAt(i).Name())]; !ok {
-			s.AppendFormField(s2.FieldAt(i))
+			s.AppendFromField(s2.FieldAt(i))
 			elems = append(elems, m2.ValueAt(i))
 		}
 	}
@@ -29,7 +29,7 @@ func MergeModifier(m1 btuple.Modifier, s1 bschema.Reader, m2 btuple.Modifier, s2
 }
 
 func MergeSchema(s1 bschema.Reader, s2 bschema.Reader) (s bschema.ReaderWriter) {
-	s = bschema.NewReaderWriteFormReader(s1)
+	s = bschema.NewReaderWriteFromReader(s1)
 	set := map[string]struct{}{}
 
 	for i := 0; i < s.FieldsLen(); i++ {
@@ -38,7 +38,7 @@ func MergeSchema(s1 bschema.Reader, s2 bschema.Reader) (s bschema.ReaderWriter) 
 
 	for i := 0; i < s2.FieldsLen(); i++ {
 		if _, ok := set[string(s2.FieldAt(i).Name())]; !ok {
-			s.AppendFormField(s2.FieldAt(i))
+			s.AppendFromField(s2.FieldAt(i))
 		}
 	}
 	return
