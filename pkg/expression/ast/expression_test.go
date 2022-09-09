@@ -532,6 +532,47 @@ func TestIdentifier_Evaluate(t *testing.T) {
 
 }
 
+type mockAccessorValue struct {
+}
+
+func (m *mockAccessorValue) GetMember(ident string) *Primitive {
+	switch ident {
+	case "a":
+		return &Primitive{Typ: INT, Value: 1}
+	case "b":
+		return &Primitive{Typ: INT, Value: 2}
+	default:
+		return &Primitive{Typ: INT, Value: 0}
+	}
+}
+
+func TestAccessor_Evaluate(t *testing.T) {
+	ctx := NewContext()
+	ctx.AddAccessor("obj", &mockAccessorValue{})
+	sets := []TestSet{
+		{
+			expr: &BinaryOperationExpr{
+				Op: ADD,
+				L: &Accessor{
+					Typ:      MEMBER_ACCESSOR,
+					Ancestor: &Primitive{Typ: IDENTIFIER, Value: "obj"},
+					Ident:    &Primitive{Typ: IDENTIFIER, Value: "a"},
+				},
+				R: &Accessor{
+					Typ:      MEMBER_ACCESSOR,
+					Ancestor: &Primitive{Typ: IDENTIFIER, Value: "obj"},
+					Ident:    &Primitive{Typ: IDENTIFIER, Value: "b"},
+				},
+			},
+			expected: &Primitive{Typ: INT, Value: 3},
+			ctx:      ctx,
+		},
+	}
+
+	runTests(sets, t)
+
+}
+
 func TestUnaryOperationExpr_Evaluate(t *testing.T) {
 	sets := []TestSet{
 		{

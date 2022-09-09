@@ -6,6 +6,7 @@ type DfsIterator interface {
 	Iterator
 }
 
+// NewDfsIterator returns a preorder traversal iterator
 func NewDfsIterator(root ast.Evaluable, opts ...*Option) DfsIterator {
 	opt := getOpt(opts...)
 	return &dfsIterator{
@@ -15,6 +16,7 @@ func NewDfsIterator(root ast.Evaluable, opts ...*Option) DfsIterator {
 	}
 }
 
+// dfsIterator preorder traversal
 type dfsIterator struct {
 	nextNode ast.Evaluable
 	cursor   int

@@ -27,7 +27,7 @@ func TestNewUpdateExecutor(t *testing.T) {
 
 	// update tuples
 	sc = mockDb.NewTxnAt(5, true)
-	scan, err := NewSeqScanExecutor(sc, plan.NewSeqScanPlan(mockDBInfo1.TableInfo[0], nil, 1, 1))
+	scan, err := NewSeqScanExecutor(sc, plan.NewSeqScanPlan(mockDBInfo1.TableInfo[0], nil, nil, 1, 1))
 	assert.Nil(t, err)
 
 	updateAttrs := map[int]plan.Modifier{}
@@ -37,7 +37,7 @@ func TestNewUpdateExecutor(t *testing.T) {
 	exec, err := builder.Build(
 		plan.NewUpdatePlan(
 			[]plan.AbstractPlan{
-				plan.NewSeqScanPlan(mockDBInfo1.TableInfo[0], nil, 1, 1),
+				plan.NewSeqScanPlan(mockDBInfo1.TableInfo[0], nil, nil, 1, 1),
 			},
 			1, 1, updateAttrs),
 	), builder.Error()
@@ -58,7 +58,7 @@ func TestNewUpdateExecutor(t *testing.T) {
 
 	// verify result after update
 	sc = mockDb.NewTxnAt(7, true)
-	scan, err = NewSeqScanExecutor(sc, plan.NewSeqScanPlan(mockDBInfo1.TableInfo[0], nil, 1, 1))
+	scan, err = NewSeqScanExecutor(sc, plan.NewSeqScanPlan(mockDBInfo1.TableInfo[0], nil, nil, 1, 1))
 	assert.Nil(t, err)
 	result, ids, err = Execute(scan, context.TODO())
 	assert.Nil(t, sc.CommitTxn(context.TODO(), 8))

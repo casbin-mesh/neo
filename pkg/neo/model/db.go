@@ -27,7 +27,7 @@ func (d *DBInfo) Clone() *DBInfo {
 	return &nd
 }
 
-func (d *DBInfo) TableByName(name string) (*TableInfo, error) {
+func (d *DBInfo) TableByLName(name string) (*TableInfo, error) {
 	for _, info := range d.TableInfo {
 		if info.Name.L == strings.ToLower(name) {
 			return info, nil

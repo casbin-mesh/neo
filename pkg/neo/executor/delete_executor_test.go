@@ -31,7 +31,7 @@ func TestNewDeleteExecutor(t *testing.T) {
 	exec, err := builder.Build(
 		plan.NewDeletePlan(
 			[]plan.AbstractPlan{
-				plan.NewSeqScanPlan(mockDBInfo1.TableInfo[0], nil, 1, 1),
+				plan.NewSeqScanPlan(mockDBInfo1.TableInfo[0], nil, nil, 1, 1),
 			},
 			1, 1),
 	), builder.Error()
@@ -49,7 +49,7 @@ func TestNewDeleteExecutor(t *testing.T) {
 
 	// scan again
 	sc = mockDb.NewTxnAt(8, true)
-	scan, err := NewSeqScanExecutor(sc, plan.NewSeqScanPlan(mockDBInfo1.TableInfo[0], nil, 1, 1))
+	scan, err := NewSeqScanExecutor(sc, plan.NewSeqScanPlan(mockDBInfo1.TableInfo[0], nil, nil, 1, 1))
 	result, ids, err = Execute(scan, context.TODO())
 	err = sc.CommitTxn(context.TODO(), 9)
 	assert.Nil(t, err)

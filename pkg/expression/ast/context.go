@@ -14,6 +14,10 @@
 
 package ast
 
+type AccessorValue interface {
+	GetMember(ident string) *Primitive
+}
+
 type Parameter interface {
 	GetPrimitive() *Primitive
 }
@@ -39,6 +43,10 @@ type FirstClass map[string]interface{}
 
 func (ctx Context) Get(key string) interface{} {
 	return ctx.fc[key]
+}
+
+func (ctx Context) AddAccessor(k string, a AccessorValue) {
+	ctx.fc[k] = a
 }
 
 func (ctx Context) AddFunctionWithCtx(k string, f FunctionWithCtx) {

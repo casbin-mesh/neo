@@ -1,7 +1,9 @@
 package bschema
 
 import (
+	"bytes"
 	"github.com/casbin-mesh/neo/pkg/primitive/bsontype"
+	"github.com/casbin-mesh/neo/pkg/utils/trick"
 )
 
 type BSchema interface {
@@ -19,10 +21,11 @@ type ReaderWriter interface {
 
 type Writer interface {
 	Append(typ bsontype.Type, name []byte, defaultValue []byte)
-	AppendFormField(f Field)
+	AppendFromField(f Field)
 }
 
 type Reader interface {
+	Field(string) int
 	FieldAt(pos int) Field
 	FieldsLen() int
 }
@@ -31,6 +34,15 @@ type Reader interface {
 type readerWriter struct {
 	fields []*field
 	valLen int
+}
+
+func (bs *readerWriter) Field(s string) int {
+	for i, f := range bs.fields {
+		if bytes.Compare(trick.Slice(s), f.Name()) == 0 {
+			return i
+		}
+	}
+	return -1
 }
 
 func NewReaderWriter() ReaderWriter {
@@ -45,7 +57,7 @@ func cloneField(f Field) *field {
 	}
 }
 
-func NewReaderWriteFormReader(r Reader) ReaderWriter {
+func NewReaderWriteFromReader(r Reader) ReaderWriter {
 	fields := make([]*field, r.FieldsLen())
 	for i := 0; i < r.FieldsLen(); i++ {
 		fields[i] = cloneField(r.FieldAt(i))
@@ -53,7 +65,7 @@ func NewReaderWriteFormReader(r Reader) ReaderWriter {
 	return &readerWriter{fields: fields}
 }
 
-func (bs *readerWriter) AppendFormField(f Field) {
+func (bs *readerWriter) AppendFromField(f Field) {
 	bs.fields = append(bs.fields, cloneField(f))
 }
 
