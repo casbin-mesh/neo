@@ -32,7 +32,8 @@ func (b *executorBuilder) Build(p plan.AbstractPlan) Executor {
 
 func (b *executorBuilder) build(p plan.AbstractPlan) Executor {
 	switch v := p.(type) {
-
+	case *plan.TableRowIdScan:
+		return b.buildTableRowIdScanPlan(v)
 	case plan.InsertPlan:
 		return b.buildInsertPlan(v)
 	case plan.UpdatePlan:
@@ -66,6 +67,19 @@ func (b *executorBuilder) catchErr(err error) bool {
 		b.err = err
 	}
 	return err != nil
+}
+
+func (b *executorBuilder) buildTableRowIdScanPlan(v *plan.TableRowIdScan) Executor {
+	if !v.HasChildren() {
+		b.catchErr(ErrMissChildPlan)
+		return nil
+	}
+	childExec := b.build(v.GetChildAt(0))
+	exec, err := NewTableRowIdScanExecutor(b.ctx, v, childExec)
+	if b.catchErr(err) {
+		return nil
+	}
+	return exec
 }
 
 func (b *executorBuilder) buildConstPlan(p plan.ConstPlan) Executor {
