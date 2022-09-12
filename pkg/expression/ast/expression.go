@@ -14,10 +14,16 @@
 
 package ast
 
+import "fmt"
+
 type TernaryOperationExpr struct {
 	Cond  Evaluable
 	True  Evaluable
 	False Evaluable
+}
+
+func (e *TernaryOperationExpr) String() string {
+	return fmt.Sprintf("%s ? %s : %s", e.Cond.String(), e.True.String(), e.False.String())
 }
 
 func (e *TernaryOperationExpr) GetMutChildAt(idx int) *Evaluable {
@@ -65,6 +71,10 @@ type BinaryOperationExpr struct {
 	Op
 	L Evaluable
 	R Evaluable
+}
+
+func (e *BinaryOperationExpr) String() string {
+	return fmt.Sprintf("%s %s %s", e.L.String(), e.Op.String(), e.R.String())
 }
 
 func (e *BinaryOperationExpr) GetMutChildAt(idx int) *Evaluable {
@@ -158,6 +168,15 @@ func (e *BinaryOperationExpr) Evaluate(ctx EvaluateCtx) (*Primitive, error) {
 type UnaryOperationExpr struct {
 	Child Evaluable
 	Op
+}
+
+func (e UnaryOperationExpr) String() string {
+	switch e.Op {
+	case POST_INC_OP, POST_DEC_OP:
+		return fmt.Sprintf("%s%s", e.Child, e.Op.String())
+	default:
+		return fmt.Sprintf("%s%s", e.Op.String(), e.Child)
+	}
 }
 
 func (e *UnaryOperationExpr) GetMutChildAt(idx int) *Evaluable {

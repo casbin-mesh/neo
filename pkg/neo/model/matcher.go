@@ -1,6 +1,10 @@
 package model
 
-import "github.com/casbin-mesh/neo/pkg/expression/ast"
+import (
+	"errors"
+	"github.com/casbin-mesh/neo/pkg/expression/ast"
+	"strings"
+)
 
 type EffectPolicyType uint8
 
@@ -11,6 +15,32 @@ const (
 	Priority
 	PriorityBaseOnRole
 )
+
+var (
+	str2Type = []string{
+		"some(where (p.eft == allow))",
+		"!some(where (p.eft == deny))",
+		"some(where (p.eft == allow)) && !some(where (p.eft == deny))",
+		"priority(p.eft) || deny",
+		"subjectPriority(p.eft)",
+	}
+	str2TypeMap               map[string]EffectPolicyType
+	ErrInvalidEffectPolicyDef = errors.New("invalid effect policy definition")
+)
+
+func init() {
+	str2TypeMap = map[string]EffectPolicyType{}
+	for i, s2 := range str2Type {
+		str2TypeMap[strings.ReplaceAll(s2, " ", "")] = EffectPolicyType(i)
+	}
+}
+
+func NewEffectPolicyTypeFromString(s string) (EffectPolicyType, error) {
+	if v, ok := str2TypeMap[strings.ReplaceAll(s, " ", "")]; ok {
+		return v, nil
+	}
+	return 0, ErrInvalidEffectPolicyDef
+}
 
 type MatcherInfo struct {
 	ID           uint64
@@ -50,7 +80,7 @@ func GenerateEffectPolicyAst(policyTable, eftColumnName, allow, deny string, pol
 				L: &ast.Accessor{
 					Typ: ast.MEMBER_ACCESSOR, Ancestor: &ast.Primitive{Typ: ast.IDENTIFIER, Value: policyTable}, Ident: &ast.Primitive{Typ: ast.IDENTIFIER, Value: eftColumnName},
 				},
-				R: &ast.Primitive{Typ: ast.STRING, Value: deny},
+				R: &ast.Primitive{Typ: ast.STRING, Value: allow},
 			},
 			&ast.BinaryOperationExpr{
 				Op: ast.NE_OP,

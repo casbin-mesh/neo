@@ -14,10 +14,18 @@
 
 package ast
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+	"strconv"
+)
 
 type Error struct {
 	error
+}
+
+func (e *Error) String() string {
+	return "error"
 }
 
 func (e *Error) GetMutChildAt(idx int) *Evaluable {
@@ -55,6 +63,10 @@ func (e *Accessor) GetMutChildAt(idx int) *Evaluable {
 	} else {
 		return &e.Ident
 	}
+}
+
+func (e *Accessor) String() string {
+	return fmt.Sprintf("%s.%s", e.Ancestor.String(), e.Ident.String())
 }
 
 func (e *Accessor) Clone() Evaluable {
@@ -121,6 +133,9 @@ type ScalarFunction struct {
 	Args  []Evaluable
 }
 
+func (e ScalarFunction) String() string {
+	return fmt.Sprintf("%s(%s)", e.Ident.String(), Args(e.Args).String())
+}
 func (e ScalarFunction) GetMutChildAt(idx int) *Evaluable {
 	if idx == 0 {
 		return &e.Ident
@@ -131,6 +146,19 @@ func (e ScalarFunction) GetMutChildAt(idx int) *Evaluable {
 }
 
 type Args []Evaluable
+
+func (a Args) String() string {
+	str := ""
+	for i, evaluable := range a {
+		if i != len(a)-1 {
+			str += evaluable.String() + ", "
+		} else {
+			str += evaluable.String()
+		}
+	}
+	return str
+}
+
 type ArgsRef []*Evaluable
 
 func (a Args) Clone() Evaluable {
@@ -204,6 +232,23 @@ type Primitive struct {
 
 func (p *Primitive) GetMutChildAt(idx int) *Evaluable {
 	return nil
+}
+
+func (p *Primitive) String() string {
+	switch p.Typ {
+	case NULL:
+		return "NULL"
+	case INT:
+		return strconv.Itoa(p.Value.(int))
+	case FLOAT:
+		return fmt.Sprintf("%v", p.Value.(float64))
+	case BOOLEAN, IDENTIFIER:
+		return fmt.Sprintf("%v", p.Value)
+	case STRING:
+		return fmt.Sprintf("\"%v\"", p.Value.(string))
+	default:
+		return "unknown"
+	}
 }
 
 // AsBool https://developer.mozilla.org/en-US/docs/Glossary/Truthy

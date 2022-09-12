@@ -21,11 +21,16 @@ type AbstractPlan interface {
 	GetChildAt(idx int) AbstractPlan
 	GetChildren() []AbstractPlan
 	GetType() PlanType
+	String() string
 }
 
 type abstractPlan struct {
 	schema   bschema.Reader
 	children []AbstractPlan
+}
+
+func (a abstractPlan) String() string {
+	return "unimplemented"
 }
 
 func (a abstractPlan) OutputSchema() bschema.Reader {

@@ -1,4 +1,4 @@
-// Copyright 2022 The casbin-mesh Authors. All Rights Reserved.
+// Copyright 2022 The casbin-neo Authors. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,23 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package model
+package ctx
 
-import "strings"
-
-type Cloneable interface {
-	Clone() Cloneable
+type TableStatic interface {
+	// GetColEstimatedCardinality returns count / the number of distinct value
+	GetColEstimatedCardinality(col string) uint64
+	// GetColCardinality returns static collected by CM sketch
+	GetColCardinality(col string, value string) uint64
+	// GetCount returns total row number
+	GetCount() uint64
 }
 
-// CIStr is case insensitive string.
-type CIStr struct {
-	O string
-	L string
-}
-
-func NewCIStr(origin string) CIStr {
-	return CIStr{
-		O: origin,
-		L: strings.ToLower(origin),
-	}
+type CostModel interface {
+	GetTableStatic(name string) TableStatic
 }

@@ -1,4 +1,4 @@
-// Copyright 2022 The casbin-mesh Authors. All Rights Reserved.
+// Copyright 2022 The casbin-neo Authors. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,23 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package model
+package ctx
 
-import "strings"
+import (
+	"github.com/casbin-mesh/neo/pkg/neo/model"
+	"github.com/casbin-mesh/neo/pkg/neo/session"
+)
 
-type Cloneable interface {
-	Clone() Cloneable
+type Base interface {
+	PolicyTableName() string
+	EffectColName() string
+	AllowIdent() string
+	DenyIdent() string
+	ReqAccessorAncestorName() string
+	Matcher() *model.MatcherInfo
+	DB() *model.DBInfo
+	Table() *model.TableInfo
 }
 
-// CIStr is case insensitive string.
-type CIStr struct {
-	O string
-	L string
-}
-
-func NewCIStr(origin string) CIStr {
-	return CIStr{
-		O: origin,
-		L: strings.ToLower(origin),
-	}
+type Ctx interface {
+	Base
+	CostModel
+	session.Context
 }

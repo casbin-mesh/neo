@@ -1,4 +1,4 @@
-// Copyright 2022 The casbin-mesh Authors. All Rights Reserved.
+// Copyright 2022 The casbin-neo Authors. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,23 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package model
+package cascades
 
-import "strings"
+type Id int
 
-type Cloneable interface {
-	Clone() Cloneable
-}
+type RuleSet map[Id]Rule
 
-// CIStr is case insensitive string.
-type CIStr struct {
-	O string
-	L string
-}
-
-func NewCIStr(origin string) CIStr {
-	return CIStr{
-		O: origin,
-		L: strings.ToLower(origin),
-	}
+type Rule interface {
+	Id() Id
+	Apple(s *SExpr, state *TransformState) error
+	Pattern() *SExpr
 }
