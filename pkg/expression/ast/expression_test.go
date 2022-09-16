@@ -28,9 +28,13 @@ type TestSet struct {
 
 func runTests(sets []TestSet, t *testing.T) {
 	for i, set := range sets {
+		before := set.expr.String()
 		actual, err := set.expr.Evaluate(set.ctx)
+		after := set.expr.String()
+		assert.Equalf(t, before, after, before)
 		assert.Equal(t, set.err, err)
-		assert.Equalf(t, set.expected, actual, "set:%d\n", i)
+		assert.Equalf(t, set.expected.Typ, actual.Typ, "set:%d\n", i)
+		assert.Equalf(t, set.expected.Value, actual.Value, "set:%d\n", i)
 	}
 }
 
@@ -489,11 +493,11 @@ func (f *mockFunc) Eval(ctx EvaluateCtx, args ...Evaluable) (*Primitive, error) 
 
 func TestIdentifier_Evaluate(t *testing.T) {
 	ctx := NewContext()
-	ctx.AddParameter("a", Primitive{Typ: INT, Value: 1})
-	ctx.AddParameter("b", Primitive{Typ: INT, Value: 1})
-	ctx.AddParameter("c", Primitive{Typ: FLOAT, Value: 2.0})
-	ctx.AddParameter("str", Primitive{Typ: STRING, Value: "Cat"})
-	ctx.AddParameter("bool", Primitive{Typ: BOOLEAN, Value: false})
+	ctx.AddParameter("a", &Primitive{Typ: INT, Value: 1})
+	ctx.AddParameter("b", &Primitive{Typ: INT, Value: 1})
+	ctx.AddParameter("c", &Primitive{Typ: FLOAT, Value: 2.0})
+	ctx.AddParameter("str", &Primitive{Typ: STRING, Value: "Cat"})
+	ctx.AddParameter("bool", &Primitive{Typ: BOOLEAN, Value: false})
 	sets := []TestSet{
 		{
 			expr: &BinaryOperationExpr{

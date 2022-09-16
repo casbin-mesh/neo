@@ -1,7 +1,6 @@
 package expression
 
 import (
-	"fmt"
 	"github.com/casbin-mesh/neo/pkg/expression/ast"
 	"github.com/casbin-mesh/neo/pkg/parser"
 	"github.com/stretchr/testify/assert"
@@ -58,6 +57,11 @@ func TestAbstractExpression_AccessorMembers(t *testing.T) {
 		evaluable := parser.ParseFromString("r.sub == r.obj.Owner").(ast.Evaluable)
 		ae := NewAbstractExpression(evaluable)
 		assert.Equal(t, []string{"Owner", "obj", "sub"}, sortStrings(ae.AccessorMembers()))
+	})
+	t.Run("complex", func(t *testing.T) {
+		evaluable := parser.MustParseFromString("(r.subOwner == p.subOwner || p.subOwner == \"*\") && \\\n    (r.subName == p.subName || p.subName == \"*\" || r.subName != \"anonymous\" && p.subName == \"!anonymous\") && \\\n    (r.method == p.method || p.method == \"*\") && \\\n    (r.urlPath == p.urlPath || p.urlPath == \"*\") && \\\n    (r.objOwner == p.objOwner || p.objOwner == \"*\") && \\\n    (r.objName == p.objName || p.objName == \"*\") || \\\n    (r.subOwner == r.objOwner && r.subName == r.objName)")
+		ae := NewAbstractExpression(evaluable)
+		assert.Equal(t, []string{"method", "objName", "objOwner", "subName", "subOwner", "urlPath"}, sortStrings(ae.AccessorMembers()))
 	})
 }
 
@@ -209,66 +213,4 @@ func TestAbstractExpression_Prune(t *testing.T) {
 		assert.Equal(t, evaluable, remained)
 	})
 
-}
-
-func TestNewPredicate(t *testing.T) {
-	root := parser.MustParseFromString("r.sub == p.sub && (r.obj == p.obj || r.obj == \"public\") && r.act == p.act || r.sub == \"root\" ")
-	pre := NewPredicate(root)
-	re := RewritePredicate(pre)
-	fmt.Println(re)
-
-}
-
-type testAppendAst2Predicate struct {
-	root     ast.Evaluable
-	eft      ast.Evaluable
-	skip     func(ast ast.Evaluable) bool
-	expected Predicate
-}
-
-func runTest(sets []testAppendAst2Predicate, t *testing.T) {
-	for _, set := range sets {
-		predicate := RewritePredicate(NewPredicate(set.root))
-		AppendAst2Predicate(&predicate, set.eft, set.skip)
-		assert.Equal(t, set.expected, predicate)
-	}
-}
-
-func TestAppendAst2Predicate2(t *testing.T) {
-	sets := []testAppendAst2Predicate{
-		{
-			root:     parser.MustParseFromString("r.sub == p.sub && r.obj == p.obj && r.act == p.act"),
-			eft:      parser.MustParseFromString("r.eft == allow"),
-			expected: RewritePredicate(NewPredicate(parser.MustParseFromString("r.sub == p.sub && r.obj == p.obj && r.act == p.act && r.eft == allow"))),
-		},
-		{
-			root:     parser.MustParseFromString("r.sub == p.sub && r.obj == p.obj && r.act == p.act || r.sub == \"root\""),
-			eft:      parser.MustParseFromString("r.eft == allow"),
-			expected: RewritePredicate(NewPredicate(parser.MustParseFromString("r.sub == p.sub && r.obj == p.obj && r.act == p.act && r.eft == allow || r.sub == \"root\""))),
-			skip: func(node ast.Evaluable) bool { // mock skip const node
-				n, ok := node.(*ast.BinaryOperationExpr)
-				if ok {
-					if v, ok := n.R.(*ast.Primitive); ok {
-						return v.Typ == ast.STRING
-					}
-				}
-				return false
-			},
-		},
-		{
-			root:     parser.MustParseFromString("r.sub == p.sub && (r.obj == p.obj || r.obj == \"public\") && r.act == p.act || r.sub == \"root\""),
-			eft:      parser.MustParseFromString("r.eft == allow"),
-			expected: RewritePredicate(NewPredicate(parser.MustParseFromString("r.sub == p.sub && (r.obj == p.obj || r.obj == \"public\") && r.act == p.act && r.eft == allow || r.sub == \"root\""))),
-			skip: func(node ast.Evaluable) bool {
-				n, ok := node.(*ast.BinaryOperationExpr)
-				if ok {
-					if v, ok := n.R.(*ast.Primitive); ok {
-						return v.Typ == ast.STRING
-					}
-				}
-				return false
-			},
-		},
-	}
-	runTest(sets, t)
 }

@@ -142,28 +142,29 @@ var defaultBoolEvalMap = map[Op]CondEvalFnGroup{
 
 func getConditionalExprRetValue(ctx EvaluateCtx, op Op, evalMap CondEvalMap, l, r *Primitive) *Primitive {
 	evalGroup := evalMap[op]
+	ret := getReusablePrimitive(l, r)
 	if l.Typ != r.Typ {
-		l.Typ = BOOLEAN
-		l.Value = false
-		return l
+		ret.Typ = BOOLEAN
+		ret.Value = false
+		return ret
 	}
 	switch l.Typ {
 	case INT:
-		l.Typ = BOOLEAN
-		l.Value = evalGroup.evalInt(l.Value.(int), r.Value.(int))
-		return l
+		ret.Typ = BOOLEAN
+		ret.Value = evalGroup.evalInt(l.Value.(int), r.Value.(int))
+		return ret
 	case FLOAT:
-		l.Typ = BOOLEAN
-		l.Value = evalGroup.evalFloat(l.Value.(float64), r.Value.(float64))
-		return l
+		ret.Typ = BOOLEAN
+		ret.Value = evalGroup.evalFloat(l.Value.(float64), r.Value.(float64))
+		return ret
 	case STRING:
-		l.Typ = BOOLEAN
-		l.Value = evalGroup.evalString(l.Value.(string), r.Value.(string))
-		return l
+		ret.Typ = BOOLEAN
+		ret.Value = evalGroup.evalString(l.Value.(string), r.Value.(string))
+		return ret
 	case BOOLEAN:
-		l.Typ = BOOLEAN
-		l.Value = evalGroup.evalBool(l.Value.(bool), r.Value.(bool))
-		return l
+		ret.Typ = BOOLEAN
+		ret.Value = evalGroup.evalBool(l.Value.(bool), r.Value.(bool))
+		return ret
 	case IDENTIFIER:
 		// TODO: eval identifier
 	}
@@ -192,17 +193,18 @@ func getRegexOperationExprRetValue(ctx EvaluateCtx, op Op, l, r *Primitive) (*Pr
 	if r.Typ != STRING || l.Typ != STRING {
 		return nil, ErrInvalidRegexExpr
 	}
-	l.Typ = BOOLEAN
+	ret := getReusablePrimitive(l, r)
+	ret.Typ = BOOLEAN
 	reg, err := regexp.Compile(r.Value.(string))
 	if err != nil {
 		return nil, ErrCompileRegexFailed
 	}
-	if op == RE_OP {
 
-		l.Value = reg.MatchString(l.Value.(string))
+	if op == RE_OP {
+		ret.Value = reg.MatchString(l.Value.(string))
 	} else {
-		l.Value = !reg.MatchString(l.Value.(string))
+		ret.Value = !reg.MatchString(l.Value.(string))
 	}
 
-	return l, nil
+	return ret, nil
 }

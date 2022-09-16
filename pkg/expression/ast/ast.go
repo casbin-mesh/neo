@@ -27,4 +27,5 @@ type Evaluable interface {
 	GetMutChildAt(idx int) *Evaluable
 	ChildrenLen() int
 	Clone() Evaluable
+	String() string
 }

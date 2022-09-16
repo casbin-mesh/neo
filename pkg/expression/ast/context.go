@@ -53,7 +53,7 @@ func (ctx Context) AddFunctionWithCtx(k string, f FunctionWithCtx) {
 	ctx.fc[k] = f
 }
 
-func (ctx Context) AddParameter(k string, p Primitive) {
+func (ctx Context) AddParameter(k string, p *Primitive) {
 	ctx.fc[k] = p
 }
 

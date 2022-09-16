@@ -9,7 +9,7 @@ import (
 )
 
 /*
-  Serves as a "water test" to give an idea of the general overhead of parsing
+Serves as a "water test" to give an idea of the general overhead of parsing
 */
 func BenchmarkSingleParse_govaluate(bench *testing.B) {
 	for i := 0; i < bench.N; i++ {
@@ -25,7 +25,7 @@ func BenchmarkSingleParse(bench *testing.B) {
 }
 
 /*
-  Benchmarks the bare-minimum evaluation time
+Benchmarks the bare-minimum evaluation time
 */
 func BenchmarkEvaluationSingle_govaluate(bench *testing.B) {
 	expression, _ := govaluate.NewEvaluableExpression("1")
@@ -46,7 +46,7 @@ func BenchmarkEvaluationSingle(bench *testing.B) {
 }
 
 /*
-  Benchmarks evaluation times of literals (no variables, no modifiers)
+Benchmarks evaluation times of literals (no variables, no modifiers)
 */
 func BenchmarkEvaluationNumericLiteral_govaluate(bench *testing.B) {
 
@@ -69,7 +69,7 @@ func BenchmarkEvaluationNumericLiteral(bench *testing.B) {
 }
 
 /*
-  Benchmarks evaluation times of literals with modifiers
+Benchmarks evaluation times of literals with modifiers
 */
 func BenchmarkEvaluationLiteralModifiers_govaluate(bench *testing.B) {
 
@@ -93,7 +93,7 @@ func BenchmarkEvaluationLiteralModifiers(bench *testing.B) {
 }
 
 /*
-  Benchmarks evaluation times of parameters
+Benchmarks evaluation times of parameters
 */
 func BenchmarkEvaluationParameters_govaluate(bench *testing.B) {
 
@@ -115,8 +115,8 @@ func BenchmarkEvaluationParameters(bench *testing.B) {
 	parser.Parse(s)
 	expression := parser.GetParseResult(s).(ast.Evaluable)
 	ctx := ast.NewContext()
-	ctx.AddParameter("requests_made", ast.Primitive{Typ: ast.INT, Value: 99})
-	ctx.AddParameter("requests_succeeded", ast.Primitive{Typ: ast.INT, Value: 90})
+	ctx.AddParameter("requests_made", &ast.Primitive{Typ: ast.INT, Value: 99})
+	ctx.AddParameter("requests_succeeded", &ast.Primitive{Typ: ast.INT, Value: 90})
 
 	bench.ResetTimer()
 	for i := 0; i < bench.N; i++ {
@@ -125,7 +125,7 @@ func BenchmarkEvaluationParameters(bench *testing.B) {
 }
 
 /*
-  Benchmarks evaluation times of parameters + literals with modifiers
+Benchmarks evaluation times of parameters + literals with modifiers
 */
 func BenchmarkEvaluationParametersModifiers_govaluate(bench *testing.B) {
 
@@ -147,8 +147,8 @@ func BenchmarkEvaluationParametersModifiers(bench *testing.B) {
 	parser.Parse(s)
 	expression := parser.GetParseResult(s).(ast.Evaluable)
 	ctx := ast.NewContext()
-	ctx.AddParameter("requests_made", ast.Primitive{Typ: ast.INT, Value: 99})
-	ctx.AddParameter("requests_succeeded", ast.Primitive{Typ: ast.INT, Value: 90})
+	ctx.AddParameter("requests_made", &ast.Primitive{Typ: ast.INT, Value: 99})
+	ctx.AddParameter("requests_succeeded", &ast.Primitive{Typ: ast.INT, Value: 90})
 
 	bench.ResetTimer()
 	for i := 0; i < bench.N; i++ {
@@ -157,7 +157,7 @@ func BenchmarkEvaluationParametersModifiers(bench *testing.B) {
 }
 
 /*
-  Benchmarks evaluation times of functions + parameters + literals with modifiers
+Benchmarks evaluation times of functions + parameters + literals with modifiers
 */
 func BenchmarkEvaluationFunction_govaluate(bench *testing.B) {
 
@@ -190,7 +190,7 @@ func BenchmarkEvaluationFunction(bench *testing.B) {
 	parser.Parse(s)
 	expression := parser.GetParseResult(s).(ast.Evaluable)
 	ctx := ast.NewContext()
-	ctx.AddParameter("requests_succeeded", ast.Primitive{Typ: ast.INT, Value: 90})
+	ctx.AddParameter("requests_succeeded", &ast.Primitive{Typ: ast.INT, Value: 90})
 
 	ret := &ast.Primitive{Typ: ast.INT, Value: 99}
 	fn1 := mockFunc{

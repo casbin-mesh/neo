@@ -31,11 +31,12 @@ func getLogicalAndRetValue(ctx EvaluateCtx, l, r Evaluable) (*Primitive, error) 
 			return nil, err
 		}
 	}
-
+	ret := getReusablePrimitive(lhs, rhs)
 	// Short Circuital
 	if lhs.Typ == BOOLEAN && !lhs.AsBool(ctx) {
-		lhs.Value = false
-		return lhs, nil
+		ret.Typ = BOOLEAN
+		ret.Value = false
+		return ret, nil
 	}
 
 	if rhs, err = r.Evaluate(ctx); err != nil {
@@ -51,9 +52,9 @@ func getLogicalAndRetValue(ctx EvaluateCtx, l, r Evaluable) (*Primitive, error) 
 	lVal, rVal := lhs.AsBool(ctx), rhs.AsBool(ctx)
 
 	if lhs.Typ == BOOLEAN && rhs.Typ == BOOLEAN {
-		lhs.Typ = BOOLEAN
-		lhs.Value = lVal && rVal
-		return lhs, nil
+		ret.Typ = BOOLEAN
+		ret.Value = lVal && rVal
+		return ret, nil
 	} else {
 		if lVal && rVal { // if all values are truthy, the value of the last operand is returned.
 			return rhs, nil
