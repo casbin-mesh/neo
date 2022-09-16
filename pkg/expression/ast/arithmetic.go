@@ -96,23 +96,22 @@ func getArithmeticRetValue(ctx EvaluateCtx, op Op, evalMap ArithmeticEvalMap, l,
 	lFloat, rFloat := hasFloat64(l, r)
 	evalInt := evalMap[op].evalInt
 	evalFloat := evalMap[op].evalFloat
+	ret := getReusablePrimitive(l, r)
 
 	if lInt && rInt {
-		l.Typ = INT
-		l.Value = evalInt(l.Value.(int), r.Value.(int))
-		return l
+		ret.Typ = INT
+		ret.Value = evalInt(l.Value.(int), r.Value.(int))
 	} else if lFloat && rFloat {
-		l.Typ = FLOAT
-		l.Value = evalFloat(l.Value.(float64), r.Value.(float64))
-		return l
+		ret.Typ = FLOAT
+		ret.Value = evalFloat(l.Value.(float64), r.Value.(float64))
 	} else {
 		if lFloat && rInt {
-			l.Typ = FLOAT
-			l.Value = evalFloat(l.Value.(float64), float64(r.Value.(int)))
+			ret.Typ = FLOAT
+			ret.Value = evalFloat(l.Value.(float64), float64(r.Value.(int)))
 		} else if lInt && rFloat {
-			l.Typ = FLOAT
-			l.Value = evalFloat(float64(l.Value.(int)), r.Value.(float64))
+			ret.Typ = FLOAT
+			ret.Value = evalFloat(float64(l.Value.(int)), r.Value.(float64))
 		}
-		return l
 	}
+	return ret
 }

@@ -14,10 +14,18 @@
 
 package ast
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+	"strconv"
+)
 
 type Error struct {
 	error
+}
+
+func (e *Error) String() string {
+	return "error"
 }
 
 func (e *Error) GetMutChildAt(idx int) *Evaluable {
@@ -55,6 +63,10 @@ func (e *Accessor) GetMutChildAt(idx int) *Evaluable {
 	} else {
 		return &e.Ident
 	}
+}
+
+func (e *Accessor) String() string {
+	return fmt.Sprintf("%s.%s", e.Ancestor.String(), e.Ident.String())
 }
 
 func (e *Accessor) Clone() Evaluable {
@@ -121,6 +133,9 @@ type ScalarFunction struct {
 	Args  []Evaluable
 }
 
+func (e ScalarFunction) String() string {
+	return fmt.Sprintf("%s(%s)", e.Ident.String(), Args(e.Args).String())
+}
 func (e ScalarFunction) GetMutChildAt(idx int) *Evaluable {
 	if idx == 0 {
 		return &e.Ident
@@ -131,6 +146,19 @@ func (e ScalarFunction) GetMutChildAt(idx int) *Evaluable {
 }
 
 type Args []Evaluable
+
+func (a Args) String() string {
+	str := ""
+	for i, evaluable := range a {
+		if i != len(a)-1 {
+			str += evaluable.String() + ", "
+		} else {
+			str += evaluable.String()
+		}
+	}
+	return str
+}
+
 type ArgsRef []*Evaluable
 
 func (a Args) Clone() Evaluable {
@@ -198,12 +226,30 @@ func (e *ScalarFunction) ChildrenLen() int {
 }
 
 type Primitive struct {
-	Typ   Type
-	Value interface{}
+	Typ     Type
+	Value   interface{}
+	Mutable bool
 }
 
 func (p *Primitive) GetMutChildAt(idx int) *Evaluable {
 	return nil
+}
+
+func (p *Primitive) String() string {
+	switch p.Typ {
+	case NULL:
+		return "NULL"
+	case INT:
+		return strconv.Itoa(p.Value.(int))
+	case FLOAT:
+		return fmt.Sprintf("%v", p.Value.(float64))
+	case BOOLEAN, IDENTIFIER:
+		return fmt.Sprintf("%v", p.Value)
+	case STRING:
+		return fmt.Sprintf("\"%v\"", p.Value.(string))
+	default:
+		return "unknown"
+	}
 }
 
 // AsBool https://developer.mozilla.org/en-US/docs/Glossary/Truthy
@@ -281,11 +327,21 @@ func (p *Primitive) Evaluate(ctx EvaluateCtx) (*Primitive, error) {
 			return null, nil
 		}
 		// it can convert to parameter
-		if param, ok := value.(Primitive); ok {
-			return &param, nil
+		if param, ok := value.(*Primitive); ok {
+			return param, nil
 		}
 		//TODO: handles when the identifier is a function
 		return null, nil
 	}
 	return p, nil
+}
+
+func getReusablePrimitive(l, r *Primitive) *Primitive {
+	if l.Mutable {
+		return l
+	} else if r != nil && r.Mutable {
+		return r
+	} else {
+		return &Primitive{Mutable: true}
+	}
 }
