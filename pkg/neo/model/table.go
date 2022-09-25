@@ -1,6 +1,7 @@
 package model
 
 import (
+	"github.com/casbin-mesh/neo/pkg/expression/ast"
 	"github.com/casbin-mesh/neo/pkg/primitive/bschema"
 	"strings"
 )
@@ -37,6 +38,34 @@ func (t *TableInfo) Clone() *TableInfo {
 		nt.ForeignKeys[i] = key.Clone()
 	}
 	return &nt
+}
+
+func (t *TableInfo) SelectAst(reqName string) ast.Evaluable {
+	tableName := t.Name.L
+	tableAccessorAncestor := &ast.Primitive{Typ: ast.IDENTIFIER, Value: tableName}
+	reqAccessorAncestor := &ast.Primitive{Typ: ast.IDENTIFIER, Value: reqName}
+	var cur ast.Evaluable
+
+	for _, column := range t.Columns {
+		attrName := column.ColName.L
+		attrIdent := &ast.Primitive{Typ: ast.IDENTIFIER, Value: attrName}
+		node := &ast.BinaryOperationExpr{
+			Op: ast.EQ_OP,
+			L:  &ast.Accessor{Typ: ast.MEMBER_ACCESSOR, Ancestor: reqAccessorAncestor, Ident: attrIdent},
+			R:  &ast.Accessor{Typ: ast.MEMBER_ACCESSOR, Ancestor: tableAccessorAncestor, Ident: attrIdent},
+		}
+		if cur == nil {
+			cur = node
+		} else {
+			cur = &ast.BinaryOperationExpr{
+				Op: ast.AND_OP,
+				L:  cur,
+				R:  node,
+			}
+		}
+	}
+
+	return cur
 }
 
 func (t *TableInfo) FieldAt(pos int) bschema.Field {

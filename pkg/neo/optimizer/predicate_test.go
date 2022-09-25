@@ -1,4 +1,4 @@
-// Copyright 2022 The casbin-mesh Authors. All Rights Reserved.
+// Copyright 2022 The casbin-neo Authors. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,23 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package model
+package optimizer
 
-import "strings"
+import (
+	"github.com/casbin-mesh/neo/pkg/parser"
+	"github.com/stretchr/testify/assert"
+	"testing"
+)
 
-type Cloneable interface {
-	Clone() Cloneable
-}
-
-// CIStr is case insensitive string.
-type CIStr struct {
-	O string
-	L string
-}
-
-func NewCIStr(origin string) CIStr {
-	return CIStr{
-		O: origin,
-		L: strings.ToLower(origin),
-	}
+func TestPredicateAccessorMember(t *testing.T) {
+	t.Run("basic", func(t *testing.T) {
+		root := parser.MustParseFromString("g(r.sub,p.sub) && r.obj == p.obj && r.act == p.act")
+		pred := Optimize(root)
+		result := GetPredicateAccessorMembers(pred, IncludeAccessorOnly)
+		assert.Equal(t, []string{"obj", "act"}, result)
+	})
 }

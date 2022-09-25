@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"bufio"
 	"encoding/csv"
 	"github.com/casbin-mesh/neo/pkg/primitive/value"
 	"os"
@@ -32,4 +33,12 @@ func CsvToTuples(path string) ([]value.Values, error) {
 	}
 
 	return recordsToTuples(data), nil
+}
+
+func ReadFile(path string) (*bufio.Reader, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	return bufio.NewReader(f), nil
 }

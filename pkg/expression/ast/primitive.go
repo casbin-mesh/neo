@@ -24,6 +24,10 @@ type Error struct {
 	error
 }
 
+func NewError(error error) *Error {
+	return &Error{error}
+}
+
 func (e *Error) String() string {
 	return "error"
 }

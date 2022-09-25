@@ -48,7 +48,7 @@ func TestNewTableRowIdScanExecutor(t *testing.T) {
 	ctx := ast.NewContext()
 	ctx.AddAccessor("p", accessor)
 
-	scanPlan := plan.NewTableRowIdScan(mockDBInfo1.TableInfo[0], 1, 1,
+	scanPlan := plan.NewTableRowIdScan(mockDBInfo1.TableInfo[0], nil, nil, 1, 1,
 		plan.NewIndexScanPlan(
 			model.NewIndexSchemaReader(mockDBInfo1.TableInfo[0], 0),
 			indexPrefix, mockExpr, ctx, 1, 1),

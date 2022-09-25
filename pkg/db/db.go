@@ -56,6 +56,7 @@ type Txn interface {
 	// can be ignored by most users.
 	CommitAt(commitTs uint64, callback func(error)) error
 	Discard()
+	ReadTs() uint64
 	Set([]byte, []byte) error
 	Delete([]byte) error
 	Get([]byte) (Item, error)
@@ -75,4 +76,5 @@ type DB interface {
 	// reclaim disk space. Can only be used with managed transactions.
 	SetDiscardTs(ts uint64)
 	Close() error
+	MaxVersion() uint64
 }

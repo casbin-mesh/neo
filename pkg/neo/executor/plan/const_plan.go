@@ -1,8 +1,10 @@
 package plan
 
 import (
+	"fmt"
 	"github.com/casbin-mesh/neo/pkg/expression"
 	"github.com/casbin-mesh/neo/pkg/expression/ast"
+	"github.com/casbin-mesh/neo/pkg/neo/utils"
 )
 
 type ConstPlan interface {
@@ -31,4 +33,8 @@ func NewConstPlan(predicate expression.Expression, ctx ast.EvaluateCtx) ConstPla
 		predicate:    predicate,
 		ctx:          ctx,
 	}
+}
+
+func (c constPlan) String() string {
+	return utils.TreeFormat(fmt.Sprintf("SeqScanPlan | Predicate: %s", c.Predicate().String()))
 }

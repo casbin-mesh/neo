@@ -1,8 +1,10 @@
 package plan
 
 import (
+	"fmt"
 	"github.com/casbin-mesh/neo/pkg/expression"
 	"github.com/casbin-mesh/neo/pkg/expression/ast"
+	"github.com/casbin-mesh/neo/pkg/neo/utils"
 	"github.com/casbin-mesh/neo/pkg/primitive/bschema"
 )
 
@@ -51,4 +53,12 @@ func NewSeqScanPlan(schema bschema.Reader, predicate expression.Expression, ctx 
 		tableOid:     tableOid,
 		ctx:          ctx,
 	}
+}
+
+func (s seqScanPlan) String() string {
+	childStr := make([]string, 0, len(s.GetChildren()))
+	for _, child := range s.GetChildren() {
+		childStr = append(childStr, child.String())
+	}
+	return utils.TreeFormat(fmt.Sprintf("SeqScanPlan | Predicate: %s", s.Predicate().String()), childStr...)
 }
