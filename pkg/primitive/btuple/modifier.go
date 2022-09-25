@@ -5,7 +5,7 @@ import (
 	"github.com/casbin-mesh/neo/pkg/primitive/bschema"
 )
 
-var ErrInvalidSchame = errors.New("invalid schema")
+var ErrInvalidSchema = errors.New("invalid schema")
 
 type Modifier interface {
 	Reader
@@ -28,7 +28,7 @@ func (m *modifier) MergeDefaultValue(schema bschema.Reader) error {
 	ll, rl := len(m.elems), schema.FieldsLen()
 
 	if ll > rl {
-		return ErrInvalidSchame
+		return ErrInvalidSchema
 	}
 	for i := 0; i < rl; i++ {
 		if i < ll {

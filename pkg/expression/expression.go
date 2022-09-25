@@ -14,11 +14,16 @@ import (
 type Expression interface {
 	Evaluate(ctx session.Context, evalCtx ast.EvaluateCtx, tuple btuple.Reader, schema bschema.Reader) (expression.Value, error)
 	AccessorMembers() []string
+	String() string
 }
 
 type AbstractExpression struct {
 	base                  ast.Evaluable
 	cachedAccessorMembers []string
+}
+
+func (a *AbstractExpression) String() string {
+	return a.base.String()
 }
 
 type TupleAccessor struct {
@@ -44,6 +49,10 @@ func (t TupleAccessor) GetMember(ident string) *ast.Primitive {
 type MemoExpression struct {
 	base     *AbstractExpression
 	accessor *TupleAccessor
+}
+
+func (m *MemoExpression) String() string {
+	return m.base.base.String()
 }
 
 func (m *MemoExpression) AccessorMembers() []string {

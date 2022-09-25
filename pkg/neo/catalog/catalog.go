@@ -13,6 +13,7 @@ type Catalog interface {
 	GetDBInfoByName(name string) (*model.DBInfo, error)
 	GetDBInfoByDBId(did uint64) (*model.DBInfo, error)
 	CreateDBInfo(ctx context.Context, info *model.DBInfo) (dbId uint64, err error)
+	GetMetaRW() meta.ReaderWriter
 }
 
 type catalog struct {
@@ -154,6 +155,10 @@ func (c *catalog) GetDBInfoByName(name string) (*model.DBInfo, error) {
 	return c.GetDBInfoByDBId(did)
 }
 
-func NewCatalog(meta meta.ReaderWriter, schema schema.ReaderWriter, txn db.Txn) Catalog {
+func NewCatalogWithMetaRW(meta meta.ReaderWriter, schema schema.ReaderWriter, txn db.Txn) Catalog {
 	return &catalog{meta: meta, schema: schema, txn: txn}
+}
+
+func NewCatalog(schema schema.ReaderWriter, txn db.Txn) Catalog {
+	return &catalog{meta: meta.NewDbMeta(txn), schema: schema, txn: txn}
 }

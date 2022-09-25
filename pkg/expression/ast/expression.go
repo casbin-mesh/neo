@@ -74,7 +74,7 @@ type BinaryOperationExpr struct {
 }
 
 func (e *BinaryOperationExpr) String() string {
-	return fmt.Sprintf("%s %s %s", e.L.String(), e.Op.String(), e.R.String())
+	return fmt.Sprintf("(%s %s %s)", e.L.String(), e.Op.String(), e.R.String())
 }
 
 func (e *BinaryOperationExpr) GetMutChildAt(idx int) *Evaluable {

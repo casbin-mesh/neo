@@ -1,5 +1,10 @@
 package plan
 
+import (
+	"fmt"
+	"github.com/casbin-mesh/neo/pkg/neo/utils"
+)
+
 type DeletePlan interface {
 	AbstractPlan
 	TableOid() uint64
@@ -30,4 +35,12 @@ func NewDeletePlan(children []AbstractPlan, tableOid uint64, dbOid uint64) Delet
 		tableOid:     tableOid,
 		dbOid:        dbOid,
 	}
+}
+
+func (d deletePlan) String() string {
+	childStr := make([]string, 0, len(d.GetChildren()))
+	for _, child := range d.GetChildren() {
+		childStr = append(childStr, child.String())
+	}
+	return utils.TreeFormat(fmt.Sprintf("DeletePlan"), childStr...)
 }

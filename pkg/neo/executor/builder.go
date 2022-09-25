@@ -59,7 +59,7 @@ func (b *executorBuilder) build(p plan.AbstractPlan) Executor {
 }
 
 var (
-	ErrMissChildPlan = errors.New("miss child plan")
+	ErrMissChildPlan = errors.New("miss child node")
 )
 
 func (b *executorBuilder) catchErr(err error) bool {
