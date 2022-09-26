@@ -26,4 +26,8 @@ func TestSchemaExec_CreateDatabase(t *testing.T) {
 	// check
 	sc = mockDb.NewTxnAt(3, false)
 	checker.Check(t, sc)
+	_, err = sc.GetCatalog().GetDBInfoByDBId(1)
+	assert.Nil(t, err)
+	// TODO:
+	//assert.Equal(t, checker.dbs[0], dbInfo)
 }

@@ -24,12 +24,14 @@ import (
 	"github.com/casbin-mesh/neo/pkg/neo/utils"
 	"github.com/casbin-mesh/neo/pkg/parser"
 	"github.com/casbin-mesh/neo/pkg/primitive/bsontype"
+	"golang.org/x/exp/slices"
 	"strings"
 )
 
 type Entity struct {
-	Name model.CIStr
-	Type bsontype.Type
+	Name         model.CIStr
+	Type         bsontype.Type
+	DefaultValue []byte
 }
 
 func GetEntitiesLName(e []Entity) []string {
@@ -55,6 +57,7 @@ var (
 	ErrMultiPolicyEntityDefinition  = errors.New("multi-policy entities definition found")
 	ErrMultiMatcherDefinition       = errors.New("multi matchers definition found")
 	ErrInvalidRoleDefinition        = errors.New("invalid role definition")
+	DefaultEftColumn                = "eft"
 )
 
 func NewGeneratorFromString(s string) (*Generator, error) {
@@ -84,10 +87,18 @@ func NewGenerator(buf *bufio.Reader) (*Generator, error) {
 			Type: bsontype.String,
 		})
 	}
-	for _, s := range strings.Split(strings.ReplaceAll(c.PolicyDef()["p"], " ", ""), ",") {
+	policies := strings.Split(strings.ReplaceAll(c.PolicyDef()["p"], " ", ""), ",")
+	for _, s := range policies {
 		ig.policy = append(ig.policy, Entity{
 			Name: model.NewCIStr(s),
 			Type: bsontype.String,
+		})
+	}
+	if !slices.Contains(policies, DefaultEftColumn) {
+		ig.policy = append(ig.policy, Entity{
+			Name:         model.NewCIStr(DefaultEftColumn),
+			Type:         bsontype.String,
+			DefaultValue: []byte("allow"),
 		})
 	}
 	for i, str := range c.RoleDef() {
@@ -143,7 +154,7 @@ func EntitiesToColumns(e []Entity) []*model.ColumnInfo {
 			Offset:          i,
 			Tp:              entity.Type,
 			DefaultValue:    nil,
-			DefaultValueBit: nil,
+			DefaultValueBit: entity.DefaultValue,
 		})
 	}
 	return cols
