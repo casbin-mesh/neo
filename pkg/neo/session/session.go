@@ -109,7 +109,6 @@ func (c *ctx) CommitTxn(ctx context.Context, commitTs uint64) error {
 		}
 		if c.oracle != nil {
 			c.oracle.DoneCommit(commitTs)
-			c.oracle.IncNextTs()
 		}
 		c.schema.CommitAt(commitTs)
 	})
@@ -120,7 +119,7 @@ func (c *ctx) RollbackTxn(ctx context.Context) {
 	c.Lock()
 	defer c.Unlock()
 
-	if c.discarded {
+	if c.committed || c.discarded {
 		return
 	}
 	c.discarded = true

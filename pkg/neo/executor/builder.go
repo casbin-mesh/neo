@@ -32,6 +32,8 @@ func (b *executorBuilder) Build(p plan.AbstractPlan) Executor {
 
 func (b *executorBuilder) build(p plan.AbstractPlan) Executor {
 	switch v := p.(type) {
+	case *plan.MiddlePlan:
+		return b.buildMiddlePlan(v)
 	case *plan.TableRowIdScan:
 		return b.buildTableRowIdScanPlan(v)
 	case plan.InsertPlan:
@@ -175,4 +177,8 @@ func (b *executorBuilder) buildMultiIndexScan(v plan.MultiIndexScan) Executor {
 		return nil
 	}
 	return exec
+}
+
+func (b *executorBuilder) buildMiddlePlan(v *plan.MiddlePlan) Executor {
+	return NewMiddleExecutor(v)
 }

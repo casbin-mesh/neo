@@ -41,6 +41,12 @@ var (
 				Offset:  2,
 				Tp:      bsontype.String,
 			},
+			{
+				ColName:         model.NewCIStr("eft"),
+				Offset:          3,
+				Tp:              bsontype.String,
+				DefaultValueBit: []byte("allow"),
+			},
 		},
 		Indices: []*model.IndexInfo{
 			{
@@ -82,6 +88,12 @@ var (
 				Offset:  1,
 				Tp:      bsontype.String,
 			},
+			{
+				ColName:         model.NewCIStr("eft"),
+				Offset:          2,
+				Tp:              bsontype.String,
+				DefaultValueBit: []byte("allow"),
+			},
 		},
 		Indices: []*model.IndexInfo{
 			{
@@ -114,6 +126,12 @@ var (
 				ColName: model.NewCIStr("act"),
 				Offset:  1,
 				Tp:      bsontype.String,
+			},
+			{
+				ColName:         model.NewCIStr("eft"),
+				Offset:          2,
+				Tp:              bsontype.String,
+				DefaultValueBit: []byte("allow"),
 			},
 		},
 		Indices: []*model.IndexInfo{

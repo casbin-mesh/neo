@@ -60,6 +60,7 @@ func explorePlans(ctx session.Base, predicate Predicate) plan.AbstractPlan {
 		result := utils.SortedIntersect(members, indexCols)
 
 		if len(result) > 0 {
+			// TODO: where the index cols covers the conditions
 			return &LogicalIndexLookupReader{
 				Build: &LogicalIndexReader{
 					Table:     ctx.Table(),
@@ -144,6 +145,9 @@ func NewSelectPlanGenerator(ctx session.Base) *SelectPlanGenerator {
 
 func (g *SelectPlanGenerator) Generate(tree ast.Evaluable) plan.AbstractPlan {
 	predicate := Optimize(tree)
+	if predicate.Type == Other {
+		predicate = Predicate{Args: []Predicate{predicate}, Type: And}
+	}
 	child := explorePlans(g.ctx, predicate)
 	return child
 }

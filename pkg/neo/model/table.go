@@ -3,6 +3,7 @@ package model
 import (
 	"github.com/casbin-mesh/neo/pkg/expression/ast"
 	"github.com/casbin-mesh/neo/pkg/primitive/bschema"
+	"golang.org/x/exp/slices"
 	"strings"
 )
 
@@ -40,13 +41,28 @@ func (t *TableInfo) Clone() *TableInfo {
 	return &nt
 }
 
-func (t *TableInfo) SelectAst(reqName string) ast.Evaluable {
+type SelectAstOptions struct {
+	IncludedColumns []string
+}
+
+func (t *TableInfo) SelectAst(reqName string, opts ...*SelectAstOptions) ast.Evaluable {
 	tableName := t.Name.L
 	tableAccessorAncestor := &ast.Primitive{Typ: ast.IDENTIFIER, Value: tableName}
 	reqAccessorAncestor := &ast.Primitive{Typ: ast.IDENTIFIER, Value: reqName}
 	var cur ast.Evaluable
 
+	var opt *SelectAstOptions
+	if len(opts) > 0 {
+		// TODO: merge options
+		opt = opts[0]
+	}
+
 	for _, column := range t.Columns {
+		if opt != nil {
+			if !slices.Contains(opt.IncludedColumns, column.ColName.L) {
+				continue
+			}
+		}
 		attrName := column.ColName.L
 		attrIdent := &ast.Primitive{Typ: ast.IDENTIFIER, Value: attrName}
 		node := &ast.BinaryOperationExpr{

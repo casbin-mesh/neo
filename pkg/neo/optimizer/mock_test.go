@@ -22,6 +22,7 @@ import (
 )
 
 var (
+	mockRequest          = map[string]string{"sub": "alice", "obj": "data1", "act": "read"}
 	mockDbWithoutIndexes = &model.DBInfo{
 		ID: 1,
 		Name: model.CIStr{
@@ -390,10 +391,15 @@ type mockCtx struct {
 	db      *model.DBInfo
 	table   *model.TableInfo
 	stats   staticModel
+	req     ast.AccessorValue
+}
+
+func (m *mockCtx) SetReqAccessor(a ast.AccessorValue) {
+	m.req = a
 }
 
 func (m mockCtx) ReqAccessor() ast.AccessorValue {
-	return nil
+	return m.req
 }
 
 func (m mockCtx) PolicyTableName() string {
@@ -432,13 +438,13 @@ func (m mockCtx) GetTableStatic(name string) session.TableStatic {
 	return nil
 }
 
-func NewMockCtx(matcher *model.MatcherInfo, db *model.DBInfo, table *model.TableInfo) session.OptimizerCtx {
+func NewMockCtx(matcher *model.MatcherInfo, db *model.DBInfo, table *model.TableInfo) *mockCtx {
 	return &mockCtx{
 		matcher: matcher, db: db, table: table,
 	}
 }
 
-func NewMockCtxWithStatic(matcher *model.MatcherInfo, db *model.DBInfo, table *model.TableInfo, stats staticModel) session.OptimizerCtx {
+func NewMockCtxWithStatic(matcher *model.MatcherInfo, db *model.DBInfo, table *model.TableInfo, stats staticModel) *mockCtx {
 	return &mockCtx{
 		matcher: matcher, db: db, table: table, stats: stats,
 	}

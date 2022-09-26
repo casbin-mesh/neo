@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"github.com/casbin-mesh/neo/pkg/expression"
 	"github.com/casbin-mesh/neo/pkg/expression/ast"
+	"github.com/casbin-mesh/neo/pkg/neo/codec"
 	"github.com/casbin-mesh/neo/pkg/neo/executor/plan"
 	"github.com/casbin-mesh/neo/pkg/neo/model"
 	"github.com/casbin-mesh/neo/pkg/neo/session"
@@ -80,6 +81,7 @@ func (p *LogicalIndexLookupReader) FindBestPlan(ctx session.OptimizerCtx) plan.A
 	evalCtx := ast.NewContext()
 	expr, accessor := expression.NewExpression(Predicate2Evaluable(p.Predicate))
 	evalCtx.AddAccessor(ctx.PolicyTableName(), accessor)
+	evalCtx.AddAccessor(ctx.ReqAccessorAncestorName(), ctx.ReqAccessor())
 	return plan.NewTableRowIdScan(ctx.Table(), expr, evalCtx, ctx.DB().ID, ctx.Table().ID, indexScan)
 }
 
@@ -135,12 +137,18 @@ func (p *LogicalIndexReader) FindBestPlan(ctx session.OptimizerCtx) plan.Abstrac
 		return false
 	})
 
+	// coveredMembers[0]
+	idx := slices.IndexFunc(p.Indexes, func(i *model.IndexInfo) bool { return i.Columns[0].ColName.L == coveredMembers[0] })
+	index := p.Indexes[idx]
+	// build prefix
+	prefix := codec.PrimaryIndexEntryKey(index.ID, codec.EncodePrimitive(ctx.ReqAccessor().GetMember(coveredMembers[0])))
+
 	evalCtx := ast.NewContext()
 	expr, accessor := expression.NewExpression(Predicate2Evaluable(pruned))
 	evalCtx.AddAccessor(ctx.PolicyTableName(), accessor)
 	evalCtx.AddAccessor(ctx.ReqAccessorAncestorName(), ctx.ReqAccessor())
 
-	return plan.NewIndexScanPlan(model.NewIndexSchemaReader(p.Table, maxCoveredIndex), nil, expr, evalCtx, p.DbId, p.TableId)
+	return plan.NewIndexScanPlan(model.NewIndexSchemaReader(p.Table, maxCoveredIndex), prefix, expr, evalCtx, p.DbId, p.TableId)
 }
 
 type LogicalMatcherPlan struct {

@@ -152,6 +152,17 @@ func TestSelectPlanGenerator_Generate(t *testing.T) {
 		assert.Equal(t, expected, output.String())
 		fmt.Println(output)
 	})
+	t.Run("basic partial expression with indexes", func(t *testing.T) {
+		tree := parser.MustParseFromString("r.sub == p.sub")
+		c := NewMockCtx(mockDbWithIndexes.MatcherInfo[0], mockDbWithIndexes, mockDbWithIndexes.TableInfo[0])
+		op := &SelectPlanGenerator{ctx: c}
+		output := op.Generate(tree)
+		expected := `LogicalIndexLookupReader | Predicate: ( (r.sub == p.sub) )
+├─(Build)LogicalIndexReader | Predicate: ( (r.sub == p.sub) )
+└─(Probe)LogicalRowIdScan | Table: 1`
+		assert.Equal(t, expected, output.String())
+		fmt.Println(output)
+	})
 	t.Run("basic expression with indexes", func(t *testing.T) {
 		tree := parser.MustParseFromString("r.sub == p.sub && r.obj == p.obj && r.act == p.act && r.eft == p.eft")
 		c := NewMockCtx(mockDbWithIndexes.MatcherInfo[0], mockDbWithIndexes, mockDbWithIndexes.TableInfo[0])

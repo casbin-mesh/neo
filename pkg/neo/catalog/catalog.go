@@ -39,6 +39,7 @@ func (c *catalog) CreateDBInfo(ctx context.Context, info *model.DBInfo) (dbId ui
 	if dbId, err = rw.NewDb(info.Name.L); err != nil {
 		return
 	}
+	info.ID = dbId
 
 	for _, matcherInfo := range info.MatcherInfo {
 		if _, err = c.createMatcher(ctx, dbId, matcherInfo); err != nil {

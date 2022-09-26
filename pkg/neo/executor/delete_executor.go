@@ -36,14 +36,14 @@ func (d *deleteExecutor) Next(ctx context.Context, tuple *btuple.Modifier, rid *
 		if err = d.GetTxn().Delete(codec.TupleRecordKey(d.tableInfo.ID, *rid)); err != nil {
 			return false, err
 		}
-	}
 
-	// delete index info
-	for _, index := range d.tableInfo.Indices {
-		key := codec.IndexEntryKey(index, d.tableInfo.Columns, *tuple, *rid)
-		if err = d.GetTxn().Delete(key); err != nil {
-			if err != db.ErrKeyNotFound {
-				return false, err
+		// delete index info
+		for _, index := range d.tableInfo.Indices {
+			key := codec.IndexEntryKey(index, d.tableInfo.Columns, *tuple, *rid)
+			if err = d.GetTxn().Delete(key); err != nil {
+				if err != db.ErrKeyNotFound {
+					return false, err
+				}
 			}
 		}
 	}

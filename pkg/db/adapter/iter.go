@@ -22,7 +22,7 @@ type IteratorOptions struct {
 // DefaultIteratorOptions contains default options when iterating over Badger key-value stores.
 var DefaultIteratorOptions = IteratorOptions{
 	PrefetchValues: true,
-	PrefetchSize:   100,
+	PrefetchSize:   1,
 	Reverse:        false,
 	AllVersions:    false,
 }

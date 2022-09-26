@@ -5,6 +5,7 @@ import (
 	"github.com/casbin-mesh/neo/pkg/db"
 	"github.com/casbin-mesh/neo/pkg/db/adapter"
 	"github.com/casbin-mesh/neo/pkg/neo/codec"
+	"github.com/casbin-mesh/neo/pkg/neo/executor/expression"
 	"github.com/casbin-mesh/neo/pkg/neo/executor/plan"
 	"github.com/casbin-mesh/neo/pkg/neo/session"
 	"github.com/casbin-mesh/neo/pkg/primitive"
@@ -47,6 +48,19 @@ func (t *tableRowIdScanExecutor) Next(ctx context.Context, tuple *btuple.Modifie
 
 	//TODO: generates tuple following the output schema
 	*tuple = btuple.NewModifier(tupleReader.Values())
+
+	predicate := t.plan.Predicate()
+	if predicate != nil {
+		if res, err := predicate.Evaluate(t.GetSessionCtx(), t.plan.GetEvalCtx(), *tuple, t.plan.OutputSchema()); err == nil {
+			if value, err := expression.TryGetBool(res); err != nil {
+				return false, err
+			} else if !value {
+				return t.Next(ctx, tuple, rid)
+			}
+		} else {
+			return false, err
+		}
+	}
 
 	return true, nil
 }
