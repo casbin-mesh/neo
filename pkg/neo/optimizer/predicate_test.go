@@ -17,6 +17,7 @@ package optimizer
 import (
 	"github.com/casbin-mesh/neo/pkg/parser"
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/exp/slices"
 	"testing"
 )
 
@@ -25,6 +26,7 @@ func TestPredicateAccessorMember(t *testing.T) {
 		root := parser.MustParseFromString("g(r.sub,p.sub) && r.obj == p.obj && r.act == p.act")
 		pred := Optimize(root)
 		result := GetPredicateAccessorMembers(pred, IncludeAccessorOnly)
-		assert.Equal(t, []string{"obj", "act"}, result)
+		slices.Sort(result)
+		assert.Equal(t, []string{"act", "obj"}, result)
 	})
 }

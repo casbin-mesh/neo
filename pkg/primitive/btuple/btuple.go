@@ -35,6 +35,10 @@ type bufferedReader struct {
 	mt  map[int]mapping
 }
 
+func (b *bufferedReader) ReadAll() []byte {
+	return b.raw
+}
+
 func (b *bufferedReader) Values() []Elem {
 	elems := make([]Elem, 0, len(b.mt))
 	for i := 0; i < len(b.mt); i++ {
@@ -90,8 +94,8 @@ func (b *bufferedReader) ValueAt(pos int) Elem {
 }
 
 func (b *bufferedReader) Occupied(pos int) bool {
-	m := b.mt[pos]
-	return m.size > 0
+	_, ok := b.mt[pos]
+	return ok
 }
 
 // NewReader return a tuple reader.

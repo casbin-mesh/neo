@@ -23,34 +23,80 @@ import (
 	"github.com/casbin-mesh/neo/pkg/neo/model"
 	"github.com/casbin-mesh/neo/pkg/neo/optimizer"
 	"github.com/casbin-mesh/neo/pkg/neo/session"
+	"github.com/casbin-mesh/neo/pkg/primitive"
 	"github.com/casbin-mesh/neo/pkg/primitive/value"
 )
 
 var (
-	DefaultPolicyTableName = "p"
-	ErrUnsupporttedFilter  = errors.New("unsupported filter")
-	ErrFailedInsertValue   = errors.New("failed to insert value")
+	ErrUnsupportedFilter = errors.New("unsupported filter")
+	ErrFailedInsertValue = errors.New("failed to insert value")
 )
 
 type table struct {
-	engine    Engine
-	tableName string
-	dbName    string
-	db        *model.DBInfo
-	table     *model.TableInfo
+	engine      Engine
+	tableName   string
+	dbName      string
+	db          *model.DBInfo
+	table       *model.TableInfo
+	matcherPlan plan.AbstractPlan
 }
 
-func (n *table) FindOne(ctx context.Context, filter interface{}) (M, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-// Find a simple eq query
-func (n *table) Find(ctx context.Context, filter interface{}, opts ...*FindOptions) ([]M, error) {
-	opt := MergeFindOptions(opts...)
+func (n *table) Update(ctx context.Context, filter interface{}, update interface{}, opts ...*UpdateOptions) (int, error) {
+	opt := MergeUpdateOptions(opts...)
 	sessCtx, err := n.engine.getSessionCtx(ctx, opt.BaseOptions)
 	defer n.engine.discardSession(ctx, sessCtx)
+	if err != nil {
+		return 0, err
+	}
+	if err = n.Init(sessCtx); err != nil {
+		return 0, err
+	}
 
+	builder := executor.NewExecutorBuilder(sessCtx)
+	queryPlan, err := n.filter2OptimizedQueryPlan(ctx, filter)
+	if err != nil {
+		return 0, err
+	}
+
+	// retrieves data
+	exec, err := builder.TryBuild(queryPlan)
+	result, tids, err := executor.Execute(exec, ctx)
+	if err != nil {
+		return 0, err
+	}
+	updateInfo, err := generateUpdateAttrInfoFromInterface(n.table, update)
+	if err != nil {
+		return 0, err
+	}
+
+	// update plan
+	updatePlan := plan.NewUpdatePlan([]plan.AbstractPlan{plan.NewMiddlePlan(result, tids)}, n.table.ID, n.db.ID, updateInfo)
+
+	// builds executor
+	exec, err = builder.Build(updatePlan), builder.Error()
+	if err != nil {
+		return 0, err
+	}
+	// executes
+	_, _, err = executor.Execute(exec, ctx)
+	if err != nil {
+		return 0, err
+	}
+
+	if opt.AutoCommit() {
+		err = n.engine.commitSession(ctx, sessCtx)
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	return len(tids), nil
+}
+
+func (n *table) Delete(ctx context.Context, filter interface{}, opts ...*DeleteOptions) ([]primitive.ObjectID, error) {
+	opt := MergeDeleteOptions(opts...)
+	sessCtx, err := n.engine.getSessionCtx(ctx, opt.BaseOptions)
+	defer n.engine.discardSession(ctx, sessCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -58,8 +104,45 @@ func (n *table) Find(ctx context.Context, filter interface{}, opts ...*FindOptio
 		return nil, err
 	}
 
-	var queryPlan plan.AbstractPlan
+	builder := executor.NewExecutorBuilder(sessCtx)
+	queryPlan, err := n.filter2OptimizedQueryPlan(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
 
+	// retrieves data
+	exec, err := builder.TryBuild(queryPlan)
+	result, tids, err := executor.Execute(exec, ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	deletePlan := plan.NewDeletePlan(
+		[]plan.AbstractPlan{plan.NewMiddlePlan(result, tids)},
+		n.table.ID, n.db.ID)
+
+	// builds executor
+	exec, err = builder.Build(deletePlan), builder.Error()
+	if err != nil {
+		return nil, err
+	}
+	// executes
+	_, _, err = executor.Execute(exec, ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if opt.AutoCommit() {
+		err = n.engine.commitSession(ctx, sessCtx)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return tids, nil
+}
+
+func (n *table) filter2OptimizedQueryPlan(ctx context.Context, filter interface{}) (queryPlan plan.AbstractPlan, err error) {
 	if filter == nil {
 		queryPlan = plan.NewSeqScanPlan(n.table, nil, nil, n.table.ID, n.db.ID)
 	} else {
@@ -86,11 +169,29 @@ func (n *table) Find(ctx context.Context, filter interface{}, opts ...*FindOptio
 			queryPlan = op.Optimizer(selectPlan)
 
 		default:
-			return nil, ErrUnsupporttedFilter
+			return nil, ErrUnsupportedFilter
 		}
+	}
+	return queryPlan, nil
+}
+
+// Find a simple eq query
+func (n *table) Find(ctx context.Context, filter interface{}, opts ...*FindOptions) ([]M, error) {
+	opt := MergeFindOptions(opts...)
+	sessCtx, err := n.engine.getSessionCtx(ctx, opt.BaseOptions)
+	defer n.engine.discardSession(ctx, sessCtx)
+	if err != nil {
+		return nil, err
+	}
+	if err = n.Init(sessCtx); err != nil {
+		return nil, err
 	}
 
 	builder := executor.NewExecutorBuilder(sessCtx)
+	queryPlan, err := n.filter2OptimizedQueryPlan(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
 	// retrieves data
 	exec, err := builder.Build(queryPlan), builder.Error()
 	if err != nil {
@@ -194,8 +295,9 @@ func (n *table) Init(sessCtx session.Context) (err error) {
 	return nil
 }
 
-func (n table) InsertOne(ctx context.Context, data A, opts ...*InsertOptions) (A, error) {
+func (n table) InsertOne(ctx context.Context, tid primitive.ObjectID, data A, opts ...*InsertOptions) (A, error) {
 	opt := MergeInsertOptions(opts...)
+	opt.SetUpdateTxn(true)
 	sessCtx, err := n.engine.getSessionCtx(ctx, opt.BaseOptions)
 	defer n.engine.discardSession(ctx, sessCtx)
 	if err != nil {
@@ -205,11 +307,15 @@ func (n table) InsertOne(ctx context.Context, data A, opts ...*InsertOptions) (A
 		return nil, err
 	}
 	builder := executor.NewExecutorBuilder(sessCtx)
-	exec, err := builder.Build(plan.NewRawInsertPlan([]value.Values{A2Values(data)}, n.db.ID, n.table.ID)), builder.Error()
+	exec, err := builder.Build(plan.NewRawInsertPlan([]primitive.ObjectID{tid}, []value.Values{A2Values(data)}, n.db.ID, n.table.ID)), builder.Error()
 	if err != nil {
 		return nil, err
 	}
 	result, _, err := executor.Execute(exec, ctx)
+
+	if err != nil {
+		return nil, err
+	}
 
 	if opt.AutoCommit() {
 		err = n.engine.commitSession(ctx, sessCtx)
@@ -224,7 +330,7 @@ func (n table) InsertOne(ctx context.Context, data A, opts ...*InsertOptions) (A
 	return DecodeValue(result[0], n.table)
 }
 
-func (n table) InsertMany(ctx context.Context, data []A, opts ...*InsertOptions) ([]A, error) {
+func (n table) InsertMany(ctx context.Context, tids []primitive.ObjectID, data []A, opts ...*InsertOptions) ([]A, error) {
 	opt := MergeInsertOptions(opts...)
 	sessCtx, err := n.engine.getSessionCtx(ctx, opt.BaseOptions)
 	defer n.engine.discardSession(ctx, sessCtx)
@@ -232,7 +338,7 @@ func (n table) InsertMany(ctx context.Context, data []A, opts ...*InsertOptions)
 		return nil, err
 	}
 	builder := executor.NewExecutorBuilder(sessCtx)
-	exec := builder.Build(plan.NewRawInsertPlan(A2ValuesArray(data), n.db.ID, n.table.ID))
+	exec := builder.Build(plan.NewRawInsertPlan(tids, A2ValuesArray(data), n.db.ID, n.table.ID))
 	result, _, err := executor.Execute(exec, ctx)
 
 	if opt.AutoCommit() {
@@ -247,6 +353,7 @@ func (n table) InsertMany(ctx context.Context, data []A, opts ...*InsertOptions)
 
 func (n table) UpdateOne(ctx context.Context, data A, update A, opts ...*UpdateOptions) (A, error) {
 	opt := MergeUpdateOptions(opts...)
+	opt.SetUpdateTxn(true)
 	sessCtx, err := n.engine.getSessionCtx(ctx, opt.BaseOptions)
 	defer n.engine.discardSession(ctx, sessCtx)
 
@@ -306,6 +413,50 @@ func (n table) UpdateOne(ctx context.Context, data A, update A, opts ...*UpdateO
 	return DecodeValue(result[0], n.table)
 }
 
+var (
+	ErrInvalidUpdate              = errors.New("invalid update")
+	ErrUnsupportedUpdate          = errors.New("unsupported update")
+	ErrUnsupportedUpdateOperation = errors.New("unsupported update operation")
+	SetOperation                  = "$set"
+)
+
+func buildSetOperation(table *model.TableInfo, update map[string]interface{}) plan.UpdateAttrsInfo {
+	info := plan.UpdateAttrsInfo{}
+	for key, v := range update {
+		idx := table.Field(key)
+		if idx == -1 {
+			// ignore not exists fields
+			continue
+		}
+		info[idx] = plan.NewModifier(plan.ModifierSet, value.NewValueFromInterface(v))
+	}
+	return info
+}
+
+func generateUpdateAttrInfoFromInterface(table *model.TableInfo, update interface{}) (plan.UpdateAttrsInfo, error) {
+	if update == nil {
+		return nil, ErrInvalidUpdate
+	}
+	switch values := update.(type) {
+	case map[string]interface{}:
+		for s, m := range values {
+			switch s {
+			case SetOperation:
+				mm, ok := m.(map[string]interface{})
+				if !ok {
+					return nil, ErrUnsupportedUpdate
+				}
+				return buildSetOperation(table, mm), nil
+			default:
+				return nil, ErrUnsupportedUpdateOperation
+			}
+		}
+		return nil, ErrUnsupportedUpdate
+	default:
+		return nil, ErrUnsupportedUpdate
+	}
+}
+
 func generateUpdateAttrInfo(data A, update A) plan.UpdateAttrsInfo {
 	info := plan.UpdateAttrsInfo{}
 	for i := 0; i < len(data); i++ {
@@ -323,6 +474,7 @@ func (n table) UpdateMany(ctx context.Context, data []A, update []A, opts ...*Up
 
 func (n table) DeleteOne(ctx context.Context, data A, opts ...*DeleteOptions) (A, error) {
 	opt := MergeDeleteOptions(opts...)
+	opt.SetUpdateTxn(true)
 	sessCtx, err := n.engine.getSessionCtx(ctx, opt.BaseOptions)
 	defer n.engine.discardSession(ctx, sessCtx)
 	if err != nil {
@@ -391,9 +543,70 @@ func (n table) DeleteMany(ctx context.Context, data []A, opts ...*DeleteOptions)
 	panic("implement me")
 }
 
-func (n table) EnforceOne(ctx context.Context, data A, opts ...*EnforceOptions) (bool, error) {
-	//TODO implement me
-	panic("implement me")
+func (n *table) Analyze(ctx context.Context, data A) (string, error) {
+	sessCtx, err := n.engine.getSessionCtx(ctx, &BaseOptions{})
+	defer n.engine.discardSession(ctx, sessCtx)
+
+	if err != nil {
+		return "", err
+	}
+	if err = n.Init(sessCtx); err != nil {
+		return "", err
+	}
+	// generates accessor from data array
+	accessor, err := EnforceValue2Accessor(n.table, data)
+	if err != nil {
+		return "", err
+	}
+	// by default, using the 0 matcher
+	matcher := n.db.MatcherInfo[0]
+	optimizerCtx := NewBaseCtx(matcher, n.db, n.table)
+	optimizerCtx.SetReqAccessor(accessor)
+
+	mg := optimizer.NewMatcherGenerator(optimizerCtx)
+	o := optimizer.NewOptimizer(optimizerCtx)
+
+	matcherPlan := o.Optimizer(mg.Generate(matcher.Predicate))
+	return matcherPlan.String(), nil
+}
+
+func (n *table) EnforceOne(ctx context.Context, data A, opts ...*EnforceOptions) (bool, error) {
+	opt := MergeEnforceOptions(opts...)
+	opt.SetUpdateTxn(true)
+	sessCtx, err := n.engine.getSessionCtx(ctx, opt.BaseOptions)
+	defer n.engine.discardSession(ctx, sessCtx)
+
+	if n.matcherPlan == nil {
+		if err != nil {
+			return false, err
+		}
+		if err = n.Init(sessCtx); err != nil {
+			return false, err
+		}
+		// generates accessor from data array
+		accessor, err := EnforceValue2Accessor(n.table, data)
+		if err != nil {
+			return false, err
+		}
+		// by default, using the 0 matcher
+		matcher := n.db.MatcherInfo[0]
+		optimizerCtx := NewBaseCtx(matcher, n.db, n.table)
+		optimizerCtx.SetReqAccessor(accessor)
+
+		mg := optimizer.NewMatcherGenerator(optimizerCtx)
+		o := optimizer.NewOptimizer(optimizerCtx)
+		n.matcherPlan = o.Optimizer(mg.Generate(matcher.Predicate))
+	}
+
+	builder := executor.NewExecutorBuilder(sessCtx)
+
+	exec, err := builder.TryBuild(n.matcherPlan)
+
+	result, _, err := executor.Execute(exec, ctx)
+	if err != nil {
+		return false, err
+	}
+	return result[0] == executor.True, nil
 }
 
 func (n table) EnforceMany(ctx context.Context, data []A, opts ...*EnforceOptions) ([]bool, error) {

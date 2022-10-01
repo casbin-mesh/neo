@@ -26,12 +26,18 @@ func NewExecutorBuilder(ctx session.Context) *executorBuilder {
 	}
 }
 
+func (b *executorBuilder) TryBuild(p plan.AbstractPlan) (Executor, error) {
+	return b.build(p), b.err
+}
+
 func (b *executorBuilder) Build(p plan.AbstractPlan) Executor {
 	return b.build(p)
 }
 
 func (b *executorBuilder) build(p plan.AbstractPlan) Executor {
 	switch v := p.(type) {
+	case plan.MatcherPlan:
+		return b.buildMatcherPlan(v)
 	case *plan.MiddlePlan:
 		return b.buildMiddlePlan(v)
 	case *plan.TableRowIdScan:
@@ -181,4 +187,20 @@ func (b *executorBuilder) buildMultiIndexScan(v plan.MultiIndexScan) Executor {
 
 func (b *executorBuilder) buildMiddlePlan(v *plan.MiddlePlan) Executor {
 	return NewMiddleExecutor(v)
+}
+
+func (b *executorBuilder) buildMatcherPlan(v plan.MatcherPlan) Executor {
+	if v.GetChildren() == nil {
+		b.catchErr(ErrMissChildPlan)
+		return nil
+	}
+	children := make([]Executor, 0, len(v.GetChildren()))
+	for _, abstractPlan := range v.GetChildren() {
+		child := b.build(abstractPlan)
+		if b.err != nil {
+			return nil
+		}
+		children = append(children, child)
+	}
+	return NewMatcherExecutor(b.ctx, v, children)
 }

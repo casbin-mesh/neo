@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package model
+package optimizer
 
 import (
 	"bufio"
@@ -138,7 +138,8 @@ func NewGenerator(buf *bufio.Reader) (*Generator, error) {
 		return nil, err
 	}
 	ig.eftPolicy = typ
-	tree, err := parser.TryParserFromString(c.Matchers()["m"])
+	ig.rawModel = c.Matchers()["m"]
+	tree, err := parser.TryParserFromString(ig.rawModel)
 	if err != nil {
 		return nil, err
 	}
@@ -160,14 +161,35 @@ func EntitiesToColumns(e []Entity) []*model.ColumnInfo {
 	return cols
 }
 
+func generateReqHashIndexInfo(col []*model.ColumnInfo, table model.CIStr, req ...string) (res []*model.IndexInfo) {
+	// hash index
+	idxCols := make([]*model.IndexColumn, 0, len(req))
+	for _, info := range col {
+		for _, s := range req {
+			if info.ColName.L == s {
+				idxCols = append(idxCols, &model.IndexColumn{ColName: info.ColName, Offset: info.Offset})
+			}
+		}
+	}
+	res = append(res, &model.IndexInfo{
+		Name:    model.NewCIStr(fmt.Sprintf("enforce_hash_index")),
+		Table:   table,
+		Columns: idxCols,
+		Tp:      model.HashIndex,
+	})
+	return res
+}
+
 func GetIndexInfos(col []*model.ColumnInfo, table model.CIStr, l ...string) (res []*model.IndexInfo) {
-	for _, s := range l {
-		for _, c := range col {
+	// single column index
+	for _, c := range col {
+		for _, s := range l {
 			if c.ColName.L == s {
 				res = append(res, &model.IndexInfo{
 					Name:    model.NewCIStr(fmt.Sprintf("%s_asc", c.ColName.O)),
 					Table:   table,
 					Columns: []*model.IndexColumn{{ColName: c.ColName, Offset: c.Offset}},
+					Tp:      model.SingleColumnIndex,
 				})
 			}
 		}
@@ -231,10 +253,23 @@ func (ig *Generator) GenerateTables() []*model.TableInfo {
 	utils.SortStrings(policyMembers)
 	indexMembers := utils.SortedIntersect(members, policyMembers)
 	columns := EntitiesToColumns(ig.policy)
+
+	reqMembers := GetPredicateAccessorMembers(NewPredicate(ig.predicate), func(node ast.Evaluable) bool {
+		switch node.(type) {
+		case *ast.ScalarFunction:
+			return true
+		default:
+			return false
+		}
+	})
+	reqMembers = append(reqMembers, "eft")
+	var indexes []*model.IndexInfo
+	indexes = append(indexes, generateReqHashIndexInfo(columns, policyTableName, reqMembers...)...)
+	indexes = append(indexes, GetIndexInfos(columns, policyTableName, indexMembers...)...)
 	policyTable := &model.TableInfo{
 		Name:    policyTableName,
 		Columns: columns,
-		Indices: GetIndexInfos(columns, policyTableName, indexMembers...),
+		Indices: indexes,
 	}
 	ig.tables = append(ig.tables, policyTable)
 

@@ -2,6 +2,11 @@ package model
 
 type IndexType uint8
 
+const (
+	SingleColumnIndex IndexType = iota
+	HashIndex
+)
+
 type IndexColumn struct {
 	ColName CIStr
 	Offset  int

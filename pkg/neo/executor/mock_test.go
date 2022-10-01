@@ -283,7 +283,7 @@ func (db *mockDB) CreateDB(t *testing.T, sc session.Context, info *model.DBInfo)
 
 func (db *mockDB) InsertTuples(t *testing.T, sc session.Context, dbOid, tableOid uint64, tuples []value.Values) (result []btuple.Modifier, ids []primitive.ObjectID, err error) {
 	builder := executorBuilder{ctx: sc}
-	executor := builder.Build(plan.NewRawInsertPlan(tuples, dbOid, tableOid))
+	executor := builder.Build(plan.NewRawInsertPlan(nil, tuples, dbOid, tableOid))
 	assert.Nil(t, builder.Error())
 	result, ids, err = Execute(executor, context.TODO())
 	return

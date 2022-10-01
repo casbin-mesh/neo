@@ -23,26 +23,25 @@ import (
 	"github.com/casbin-mesh/neo/pkg/neo/executor/plan"
 	"github.com/casbin-mesh/neo/pkg/neo/index"
 	"github.com/casbin-mesh/neo/pkg/neo/model"
-	casbinModel "github.com/casbin-mesh/neo/pkg/neo/optimizer/model"
+	casbinModel "github.com/casbin-mesh/neo/pkg/neo/optimizer"
 	"github.com/casbin-mesh/neo/pkg/neo/schema"
 	"github.com/casbin-mesh/neo/pkg/neo/session"
+	"github.com/casbin-mesh/neo/pkg/primitive"
 	"github.com/dgraph-io/badger/v3"
+	"runtime"
 )
 
 type M = map[string]interface{}
 type A = []interface{}
 
 type Table interface {
-	InsertOne(ctx context.Context, data A, opts ...*InsertOptions) (A, error)
-	InsertMany(ctx context.Context, data []A, opts ...*InsertOptions) ([]A, error)
-	UpdateOne(ctx context.Context, data A, update A, opts ...*UpdateOptions) (A, error)
-	UpdateMany(ctx context.Context, data []A, update []A, opts ...*UpdateOptions) ([]A, error)
-	DeleteOne(ctx context.Context, data A, opts ...*DeleteOptions) (A, error)
-	DeleteMany(ctx context.Context, data []A, opts ...*DeleteOptions) ([]A, error)
-	EnforceOne(ctx context.Context, data A, opts ...*EnforceOptions) (bool, error)
-	EnforceMany(ctx context.Context, data []A, opts ...*EnforceOptions) ([]bool, error)
-	FindOne(ctx context.Context, filter interface{}) (M, error)
+	InsertOne(ctx context.Context, tid primitive.ObjectID, data A, opts ...*InsertOptions) (A, error)
+	InsertMany(ctx context.Context, tids []primitive.ObjectID, data []A, opts ...*InsertOptions) ([]A, error)
+	Update(ctx context.Context, filter interface{}, update interface{}, opts ...*UpdateOptions) (updatedCount int, err error)
+	Delete(ctx context.Context, filter interface{}, opts ...*DeleteOptions) ([]primitive.ObjectID, error)
 	Find(ctx context.Context, filter interface{}, opts ...*FindOptions) ([]M, error)
+	EnforceOne(ctx context.Context, data A, opts ...*EnforceOptions) (bool, error)
+	Analyze(ctx context.Context, data A) (string, error)
 }
 
 type Namespace interface {
@@ -89,10 +88,10 @@ func (e *engine) Close() error {
 	return nil
 }
 
-func (e *engine) newSessionCtx(ctx context.Context) session.Context {
+func (e *engine) newSessionCtx(ctx context.Context, update bool) session.Context {
 	readTs := e.orc.readTs()
-	txn := e.db.NewTransactionAt(readTs, true)
-	schemaTxn := e.schema.NewTransactionAt(readTs, true)
+	txn := e.db.NewTransactionAt(readTs, update)
+	schemaTxn := e.schema.NewTransactionAt(readTs, update)
 	sessionCtx := e.sessionMgr.AllocSessionCtx(ctx, txn, schema.New(schemaTxn), e.orc)
 	return sessionCtx
 }
@@ -113,7 +112,7 @@ func (e *engine) getSessionCtx(ctx context.Context, bo *BaseOptions) (session.Co
 			return nil, ErrSessionTimeout
 		}
 	}
-	return e.newSessionCtx(ctx), nil
+	return e.newSessionCtx(ctx, bo.updateTxn), nil
 }
 
 func (e *engine) AddNamespaceFromString(ctx context.Context, namespace string, rawModel string, opts ...*BaseOptions) error {
@@ -124,6 +123,7 @@ func (e *engine) AddNamespaceFromString(ctx context.Context, namespace string, r
 	dbInfo := g.GenerateDB(namespace)
 
 	opt := MergeBaseOptions(opts...)
+	opt.SetUpdateTxn(true)
 
 	sessCtx, err := e.getSessionCtx(ctx, opt)
 	defer e.discardSession(ctx, sessCtx)
@@ -153,7 +153,10 @@ func (e *engine) AddNamespaceFromString(ctx context.Context, namespace string, r
 
 func NewEngineFromPath(path string) (Engine, error) {
 	// open database
-	instance, err := badgerAdapter.OpenManaged(badger.DefaultOptions(path))
+	instance, err := badgerAdapter.OpenManaged(
+		badger.DefaultOptions(path).
+			WithMemTableSize(64 << 24).WithNumGoroutines(runtime.NumGoroutine()),
+	)
 	if err != nil {
 		return nil, err
 	}

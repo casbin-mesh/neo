@@ -116,29 +116,43 @@ func predicateType2AstOp(predicateType PredicateType) ast.Op {
 	return 0
 }
 
-func PrunePredicate(predicate Predicate, prune func(evaluable ast.Evaluable) bool) *Predicate {
+func PrunePredicate(predicate Predicate, prune func(evaluable ast.Evaluable) bool) (pruned *Predicate, remaining *Predicate) {
 	var result []Predicate
+	var remained []Predicate
 	switch predicate.Type {
 	case And, Or:
 		for _, arg := range predicate.Args {
-			r := PrunePredicate(arg, prune)
+			r, rr := PrunePredicate(arg, prune)
 			if r != nil {
 				result = append(result, *r)
+			}
+			if rr != nil {
+				remained = append(remained, *rr)
 			}
 		}
 	case Other:
 		if prune(predicate.Expr) {
-			return &predicate
+			return &predicate, nil
 		}
-		return nil
+		return nil, &predicate
 	}
 	if len(result) == 0 {
-		return nil
+		pruned = nil
+	} else if len(result) == 1 {
+		pruned = &result[0]
+	} else {
+		pruned = &Predicate{Type: predicate.Type, Args: result}
 	}
-	if len(result) == 1 {
-		return &result[0]
+
+	if len(remained) == 0 {
+		remaining = nil
+	} else if len(remained) == 1 {
+		remaining = &remained[0]
+	} else {
+		remaining = &Predicate{Type: predicate.Type, Args: remained}
 	}
-	return &Predicate{Type: predicate.Type, Args: result}
+
+	return
 }
 
 func NewPredicate(root ast.Evaluable) Predicate {

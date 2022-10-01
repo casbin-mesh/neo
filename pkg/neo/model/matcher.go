@@ -95,7 +95,7 @@ func GenerateMatcherEffectPolicyAst(policyTable, eftColumnName, allow, deny stri
 				R: &ast.Primitive{Typ: ast.STRING, Value: allow},
 			},
 			&ast.BinaryOperationExpr{
-				Op: ast.NE_OP,
+				Op: ast.EQ_OP,
 				L: &ast.Accessor{
 					Typ: ast.MEMBER_ACCESSOR, Ancestor: &ast.Primitive{Typ: ast.IDENTIFIER, Value: policyTable}, Ident: &ast.Primitive{Typ: ast.IDENTIFIER, Value: eftColumnName},
 				},

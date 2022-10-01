@@ -20,7 +20,7 @@ import (
 )
 
 func Optimize(root ast.Evaluable) Predicate {
-	return RewritePredicate(NewPredicate(root))
+	return RewritePredicate(CNFPredicates(RewritePredicate(NewPredicate(root))))
 }
 
 //func predicateType2AstOp(predicateType PredicateType) ast.Op {
@@ -63,6 +63,78 @@ func Optimize(root ast.Evaluable) Predicate {
 //	}
 //	return nil
 //}
+
+func flatPredicates(predicate Predicate) []Predicate {
+	switch predicate.Type {
+	case And:
+		return []Predicate{predicate}
+	case Or:
+		return predicate.Args
+	default:
+		return []Predicate{predicate}
+	}
+}
+
+func buildAndPredicate(target Predicate, args ...Predicate) Predicate {
+	switch target.Type {
+	case And:
+		target.Args = append(target.Args, args...)
+		return target
+	default:
+		var predicates []Predicate
+		predicates = append(predicates, target)
+		predicates = append(predicates, args...)
+		return Predicate{Type: And, Args: predicates}
+	}
+}
+
+// CNFPredicates
+// (a || b) && (c || d) && (e || f)
+// tmpArgs: (a || b)
+// arg: (c || d)
+// newArgs: a && c || a && d || b && c || b && d
+// tmpArgs: a && c || a && d || b && c || b && d
+// arg: (e || f)
+//
+func CNFPredicates(predicate Predicate) Predicate {
+	switch predicate.Type {
+	case And:
+		for i, arg := range predicate.Args {
+			predicate.Args[i] = CNFPredicates(arg)
+		}
+
+		if len(predicate.Args) == 1 {
+			return predicate.Args[0]
+		}
+		var tmpArgs []Predicate
+		var newArgs []Predicate
+
+		tmpArgs = append(tmpArgs, flatPredicates(predicate.Args[0])...)
+		for i, arg := range predicate.Args {
+			if i == 0 {
+				continue
+			}
+			for _, pred := range flatPredicates(arg) {
+				for _, tmpArg := range tmpArgs {
+					newArgs = append(newArgs, buildAndPredicate(tmpArg, pred))
+				}
+			}
+			tmpArgs = newArgs
+			newArgs = nil
+		}
+		if len(tmpArgs) == 1 {
+			return tmpArgs[0]
+		}
+		return Predicate{Type: Or, Args: tmpArgs}
+	case Or:
+		for i, arg := range predicate.Args {
+			predicate.Args[i] = CNFPredicates(arg)
+		}
+		return predicate
+	default:
+		return predicate
+	}
+}
 
 func RewritePredicate(predicate Predicate) Predicate {
 	switch predicate.Type {

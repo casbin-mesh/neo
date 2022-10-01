@@ -65,7 +65,7 @@ func explorePlans(ctx session.Base, predicate Predicate) plan.AbstractPlan {
 				Build: &LogicalIndexReader{
 					Table:     ctx.Table(),
 					Indexes:   ctx.Table().Indices,
-					Predicate: predicate,
+					Predicate: &predicate,
 					TableId:   tableId,
 					DbId:      dbId,
 				},

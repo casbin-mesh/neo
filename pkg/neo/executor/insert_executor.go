@@ -2,12 +2,18 @@ package executor
 
 import (
 	"context"
+	"errors"
+	"github.com/casbin-mesh/neo/pkg/db"
 	"github.com/casbin-mesh/neo/pkg/neo/codec"
 	"github.com/casbin-mesh/neo/pkg/neo/executor/plan"
 	"github.com/casbin-mesh/neo/pkg/neo/model"
 	"github.com/casbin-mesh/neo/pkg/neo/session"
 	"github.com/casbin-mesh/neo/pkg/primitive"
 	"github.com/casbin-mesh/neo/pkg/primitive/btuple"
+)
+
+var (
+	ErrPrimaryKeyDuplicates = errors.New("primary key duplicates")
 )
 
 type insertExecutor struct {
@@ -38,17 +44,26 @@ func (i *insertExecutor) Next(ctx context.Context, tuple *btuple.Modifier, rid *
 		curTuple := btuple.NewModifierFromBytes(
 			codec.EncodeValues(i.insertPlan.RawValues()[i.iter]),
 		)
+		if i.insertPlan.RawIds() != nil {
+			*rid = i.insertPlan.RawIds()[i.iter]
+		} else {
+			*rid = primitive.NewObjectID()
+		}
 
 		if err = curTuple.MergeDefaultValue(i.tableInfo); err != nil {
 			return false, err
 		}
 		*tuple = curTuple
-		i.iter++
 	}
 
-	*rid = primitive.NewObjectID()
+	encodedKey := codec.TupleRecordKey(i.tableInfo.ID, *rid)
+
+	if _, err = i.GetTxn().Get(encodedKey); err != db.ErrKeyNotFound {
+		return false, ErrPrimaryKeyDuplicates
+	}
+
 	if err = i.GetTxn().Set(
-		codec.TupleRecordKey(i.tableInfo.ID, *rid),
+		encodedKey,
 		btuple.NewTupleBuilder(
 			btuple.SmallValueType, (*tuple).Values()...,
 		).Encode(),
@@ -64,6 +79,7 @@ func (i *insertExecutor) Next(ctx context.Context, tuple *btuple.Modifier, rid *
 		}
 	}
 
+	i.iter++
 	return true, nil
 }
 

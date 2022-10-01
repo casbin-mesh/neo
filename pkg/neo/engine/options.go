@@ -15,15 +15,22 @@
 package engine
 
 var (
-	DefaultBaseOptions   = &BaseOptions{sessionId: nil}
-	DefaultInsertOptions = &InsertOptions{DefaultBaseOptions}
-	DefaultDeleteOptions = &DeleteOptions{DefaultBaseOptions}
-	DefaultUpdateOptions = &UpdateOptions{DefaultBaseOptions}
-	DefaultFindOptions   = &FindOptions{DefaultBaseOptions}
+	DefaultBaseOptions    = &BaseOptions{sessionId: nil}
+	DefaultInsertOptions  = &InsertOptions{DefaultBaseOptions}
+	DefaultDeleteOptions  = &DeleteOptions{DefaultBaseOptions}
+	DefaultUpdateOptions  = &UpdateOptions{DefaultBaseOptions}
+	DefaultFindOptions    = &FindOptions{BaseOptions: DefaultBaseOptions}
+	DefaultEnforceOptions = &EnforceOptions{BaseOptions: DefaultBaseOptions}
 )
 
 type BaseOptions struct {
 	sessionId *string
+	updateTxn bool
+}
+
+func (io *BaseOptions) SetUpdateTxn(update bool) *BaseOptions {
+	io.updateTxn = update
+	return io
 }
 
 type InsertOptions struct {
@@ -76,12 +83,40 @@ type EnforceOptions struct {
 	*BaseOptions
 }
 
+func (io *EnforceOptions) Merge(another *EnforceOptions) *EnforceOptions {
+	io.BaseOptions.Merge(another.BaseOptions)
+	return io
+}
+
+func MergeEnforceOptions(opts ...*EnforceOptions) *EnforceOptions {
+	if len(opts) == 0 {
+		return DefaultEnforceOptions
+	}
+	if len(opts) == 1 {
+		return opts[0]
+	}
+	merged := &EnforceOptions{}
+	for _, opt := range opts {
+		merged.Merge(opt)
+	}
+	return merged
+}
+
 type FindOptions struct {
 	*BaseOptions
+	Limit *int
+}
+
+func (io *FindOptions) SetLimit(n int) *FindOptions {
+	*io.Limit = n
+	return io
 }
 
 func (io *FindOptions) Merge(another *FindOptions) *FindOptions {
 	io.BaseOptions.Merge(another.BaseOptions)
+	if another.Limit != nil {
+		*io.Limit = *another.Limit
+	}
 	return io
 }
 

@@ -161,10 +161,12 @@ func Bsontype2Asttype(p bsontype.Type) ast.Type {
 
 func NewValueAccessor(table *model.TableInfo, data A) *ValueAccessor {
 	lookup := map[string]*ast.Primitive{}
-	for _, column := range table.Columns {
-		lookup[column.ColName.L] = &ast.Primitive{
-			Typ:   Bsontype2Asttype(column.Tp),
-			Value: data[column.Offset],
+	for i, column := range table.Columns {
+		if i < len(data) {
+			lookup[column.ColName.L] = &ast.Primitive{
+				Typ:   Bsontype2Asttype(column.Tp),
+				Value: data[column.Offset],
+			}
 		}
 	}
 	return &ValueAccessor{table: table, lookup: lookup}
@@ -213,21 +215,30 @@ func checkType(t bsontype.Type, data interface{}) error {
 		return ErrUnsupportedType
 	}
 }
-func preCheck(table *model.TableInfo, data A) error {
-	if len(table.Columns) != len(data) {
+func preCheck(table *model.TableInfo, data A, skipLenCheck bool) error {
+	if !skipLenCheck && len(table.Columns) != len(data) {
 		return ErrInvalidDataLen
 	}
 	for i, column := range table.Columns {
-		err := checkType(column.Tp, data[i])
-		if err != nil {
-			return err
+		if i < len(data) {
+			err := checkType(column.Tp, data[i])
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
 }
 
 func Value2Accessor(table *model.TableInfo, data A) (ast.AccessorValue, error) {
-	if err := preCheck(table, data); err != nil {
+	if err := preCheck(table, data, false); err != nil {
+		return nil, err
+	}
+	return NewValueAccessor(table, data), nil
+}
+
+func EnforceValue2Accessor(table *model.TableInfo, data A) (ast.AccessorValue, error) {
+	if err := preCheck(table, data, true); err != nil {
 		return nil, err
 	}
 	return NewValueAccessor(table, data), nil

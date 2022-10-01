@@ -205,6 +205,29 @@ var (
 							},
 						},
 					},
+					{
+						ID:   4,
+						Name: model.CIStr{O: "hash_index", L: "hash_index"},
+						Tp:   model.HashIndex,
+						Columns: []*model.IndexColumn{
+							{
+								ColName: model.CIStr{O: "sub", L: "sub"},
+								Offset:  0,
+							},
+							{
+								ColName: model.CIStr{O: "obj", L: "obj"},
+								Offset:  1,
+							},
+							{
+								ColName: model.CIStr{O: "act", L: "act"},
+								Offset:  2,
+							},
+							{
+								ColName: model.CIStr{O: "eft", L: "eft"},
+								Offset:  3,
+							},
+						},
+					},
 				},
 			},
 			{
@@ -333,6 +356,29 @@ var (
 							{
 								ColName: model.CIStr{O: "act", L: "act"},
 								Offset:  2,
+							},
+						},
+					},
+					{
+						ID:   4,
+						Name: model.CIStr{O: "hash_index", L: "hash_index"},
+						Tp:   model.HashIndex,
+						Columns: []*model.IndexColumn{
+							{
+								ColName: model.CIStr{O: "sub", L: "sub"},
+								Offset:  0,
+							},
+							{
+								ColName: model.CIStr{O: "obj", L: "obj"},
+								Offset:  1,
+							},
+							{
+								ColName: model.CIStr{O: "act", L: "act"},
+								Offset:  2,
+							},
+							{
+								ColName: model.CIStr{O: "eft", L: "eft"},
+								Offset:  3,
 							},
 						},
 					},

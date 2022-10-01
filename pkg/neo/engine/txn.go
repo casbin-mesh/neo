@@ -20,13 +20,14 @@ import (
 )
 
 type StartTransactionOption struct {
-	timeout time.Duration
+	timeout   time.Duration
+	updateTxn bool
 }
 
 var DefaultStartTransactionOption = &StartTransactionOption{timeout: 60 * time.Second}
 
 func (e *engine) StartTransaction(ctx context.Context, opt *StartTransactionOption) (*Session, error) {
-	sessionId := e.sessionMgr.NewSession(e.newSessionCtx(ctx), opt.timeout)
+	sessionId := e.sessionMgr.NewSession(e.newSessionCtx(ctx, opt.updateTxn), opt.timeout)
 	return &Session{Id: sessionId}, nil
 }
 

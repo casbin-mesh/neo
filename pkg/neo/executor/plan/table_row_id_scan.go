@@ -47,5 +47,10 @@ func (s TableRowIdScan) String() string {
 	for _, child := range s.GetChildren() {
 		childStr = append(childStr, child.String())
 	}
-	return utils.TreeFormat(fmt.Sprintf("TableRowIdScan | Predicate: %s", s.predicate.String()), childStr...)
+	header := "TableRowIdScan"
+
+	if s.predicate != nil {
+		header = fmt.Sprintf("%s | Predicate: %s", header, s.predicate.String())
+	}
+	return utils.TreeFormat(header, childStr...)
 }

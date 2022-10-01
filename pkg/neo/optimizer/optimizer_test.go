@@ -30,7 +30,8 @@ func TestOptimizer_Optimizer2(t *testing.T) {
 		o := NewOptimizer(c)
 		output := o.Optimizer(lo.Generate(tree))
 		expected := `MatcherPlan | Type: AllowOverride
-└─SeqScanPlan | Predicate: ((((r.sub == p.sub) && (r.obj == p.obj)) && (r.act == p.act)) && (p.eft == "allow"))`
+└─LimitPlan | Limit:1
+  └─SeqScanPlan | Predicate: ((((r.sub == p.sub) && (r.obj == p.obj)) && (r.act == p.act)) && (p.eft == "allow"))`
 		assert.Equal(t, expected, output.String())
 		fmt.Println(output)
 	})
@@ -42,8 +43,9 @@ func TestOptimizer_Optimizer2(t *testing.T) {
 		o := NewOptimizer(c)
 		output := o.Optimizer(lo.Generate(tree))
 		expected := `MatcherPlan | Type: AllowOverride
-└─TableRowIdScan | Predicate: ((((r.sub == p.sub) && (r.obj == p.obj)) && (r.act == p.act)) && (p.eft == "allow"))
-  └─IndexScanPlan | Predicate: (r.sub == p.sub)`
+└─LimitPlan | Limit:1
+  └─TableRowIdScan
+    └─IndexScanPlan | Predicate: ((((r.sub == p.sub) && (r.obj == p.obj)) && (r.act == p.act)) && (p.eft == "allow"))`
 		assert.Equal(t, expected, output.String())
 		fmt.Println(output.String())
 	})
@@ -55,14 +57,16 @@ func TestOptimizer_Optimizer2(t *testing.T) {
 		o := NewOptimizer(c)
 		output := o.Optimizer(lo.Generate(tree))
 		expected := `MatcherPlan | Type: AllowAndDeny
-├─ShortCircuitPlan | Type: OR
-│ ├─(Const)SeqScanPlan | Predicate: (r.sub == "root")
-│ └─(Non-Const)TableRowIdScan | Predicate: ((((r.sub == p.sub) && (r.obj == p.obj)) && (r.act == p.act)) && (p.eft == "allow"))
-│   └─IndexScanPlan | Predicate: (r.sub == p.sub)
-└─ShortCircuitPlan | Type: OR
-  ├─(Const)SeqScanPlan | Predicate: (r.sub == "root")
-  └─(Non-Const)TableRowIdScan | Predicate: ((((r.sub == p.sub) && (r.obj == p.obj)) && (r.act == p.act)) && (p.eft != "deny"))
-    └─IndexScanPlan | Predicate: (r.sub == p.sub)`
+├─LimitPlan | Limit:1
+│ └─ShortCircuitPlan | Type: OR
+│   ├─(Const)SeqScanPlan | Predicate: (r.sub == "root")
+│   └─(Non-Const)TableRowIdScan
+│     └─IndexScanPlan | Predicate: ((((r.sub == p.sub) && (r.obj == p.obj)) && (r.act == p.act)) && (p.eft == "allow"))
+└─LimitPlan | Limit:1
+  └─ShortCircuitPlan | Type: OR
+    ├─(Const)SeqScanPlan | Predicate: (r.sub == "root")
+    └─(Non-Const)TableRowIdScan
+      └─IndexScanPlan | Predicate: ((((r.sub == p.sub) && (r.obj == p.obj)) && (r.act == p.act)) && (p.eft == "deny"))`
 		assert.Equal(t, expected, output.String())
 		fmt.Println(output.String())
 	})
@@ -74,14 +78,20 @@ func TestOptimizer_Optimizer2(t *testing.T) {
 		o := NewOptimizer(c)
 		output := o.Optimizer(lo.Generate(tree))
 		expected := `MatcherPlan | Type: AllowAndDeny
-├─ShortCircuitPlan | Type: OR
-│ ├─(Const)SeqScanPlan | Predicate: (r.sub == "root")
-│ └─(Non-Const)TableRowIdScan | Predicate: ((((r.sub == p.sub) && ((r.obj == p.obj) || (p.obj == "public"))) && (r.act == p.act)) && (p.eft == "allow"))
-│   └─IndexScanPlan | Predicate: (r.sub == p.sub)
-└─ShortCircuitPlan | Type: OR
-  ├─(Const)SeqScanPlan | Predicate: (r.sub == "root")
-  └─(Non-Const)TableRowIdScan | Predicate: ((((r.sub == p.sub) && ((r.obj == p.obj) || (p.obj == "public"))) && (r.act == p.act)) && (p.eft != "deny"))
-    └─IndexScanPlan | Predicate: (r.sub == p.sub)`
+├─LimitPlan | Limit:1
+│ └─ShortCircuitPlan | Type: OR
+│   ├─(Const)SeqScanPlan | Predicate: (r.sub == "root")
+│   ├─(Non-Const)TableRowIdScan
+│   │ └─IndexScanPlan | Predicate: ((((r.sub == p.sub) && (r.obj == p.obj)) && (r.act == p.act)) && (p.eft == "allow"))
+│   └─(Non-Const)TableRowIdScan
+│     └─IndexScanPlan | Predicate: ((((r.sub == p.sub) && (p.obj == "public")) && (r.act == p.act)) && (p.eft == "allow"))
+└─LimitPlan | Limit:1
+  └─ShortCircuitPlan | Type: OR
+    ├─(Const)SeqScanPlan | Predicate: (r.sub == "root")
+    ├─(Non-Const)TableRowIdScan
+    │ └─IndexScanPlan | Predicate: ((((r.sub == p.sub) && (r.obj == p.obj)) && (r.act == p.act)) && (p.eft == "deny"))
+    └─(Non-Const)TableRowIdScan
+      └─IndexScanPlan | Predicate: ((((r.sub == p.sub) && (p.obj == "public")) && (r.act == p.act)) && (p.eft == "deny"))`
 		assert.Equal(t, expected, output.String())
 		fmt.Println(output.String())
 	})
@@ -93,17 +103,36 @@ func TestOptimizer_Optimizer2(t *testing.T) {
 		o := NewOptimizer(c)
 		output := o.Optimizer(lo.Generate(tree))
 		expected := `MatcherPlan | Type: AllowOverride
-└─ShortCircuitPlan | Type: OR
-  ├─(Const)SeqScanPlan | Predicate: (r.obj == "public")
-  ├─(Const)SeqScanPlan | Predicate: (r.sub == "root")
-  ├─(Non-Const)TableRowIdScan | Predicate: ((((r.sub == p.sub) && keyMatch(r.obj, p.obj)) && (r.act == p.act)) && (p.eft == "allow"))
-  │ └─IndexScanPlan | Predicate: (r.sub == p.sub)
-  └─(Non-Const)TableRowIdScan | Predicate: (isPublic(r.obj) && (p.eft == "allow"))
-    └─IndexScanPlan | Predicate: isPublic(r.obj)`
+└─LimitPlan | Limit:1
+  └─ShortCircuitPlan | Type: OR
+    ├─(Const)SeqScanPlan | Predicate: (r.obj == "public")
+    ├─(Const)SeqScanPlan | Predicate: (r.sub == "root")
+    ├─(Non-Const)TableRowIdScan
+    │ └─IndexScanPlan | Predicate: ((((r.sub == p.sub) && keyMatch(r.obj, p.obj)) && (r.act == p.act)) && (p.eft == "allow"))
+    └─(Non-Const)TableRowIdScan | Predicate: (p.eft == "allow")
+      └─IndexScanPlan | Predicate: isPublic(r.obj)`
 		assert.Equal(t, expected, output.String())
 		fmt.Println(output.String())
 	})
 	t.Run("complex 2", func(t *testing.T) {
+		/**
+		(a || b) && (c || d) -> a && c || a && d || b && c || b && d
+		(a || b) && (c || d) && (e || f) -> (a && c || a && d || b && c || b && d) && (e || f)
+
+
+
+		(a || b || c) && (d || e) && (f || g) -> a && d && f || a && d && g || a && e && f || a && e && g ||
+		(a || b || c) && (d || e || f) && (g || h) ->
+
+
+		m = (r.subOwner == p.subOwner || p.subOwner == "*") && \
+		    (r.subName == p.subName || p.subName == "*" || r.subName != "anonymous" && p.subName == "!anonymous") && \
+		    (r.method == p.method || p.method == "*") && \
+		    (r.urlPath == p.urlPath || p.urlPath == "*") && \
+		    (r.objOwner == p.objOwner || p.objOwner == "*") && \
+		    (r.objName == p.objName || p.objName == "*") || \
+		    (r.subOwner == r.objOwner && r.subName == r.objName)
+		*/
 		tree := parser.MustParseFromString("(r.subOwner == p.subOwner || p.subOwner == \"*\") && \\\n    (r.subName == p.subName || p.subName == \"*\" || r.subName != \"anonymous\" && p.subName == \"!anonymous\") && \\\n    (r.method == p.method || p.method == \"*\") && \\\n    (r.urlPath == p.urlPath || p.urlPath == \"*\") && \\\n    (r.objOwner == p.objOwner || p.objOwner == \"*\") && \\\n    (r.objName == p.objName || p.objName == \"*\") || \\\n    (r.subOwner == r.objOwner && r.subName == r.objName)")
 		c := NewMockCtx(mockDbWithIndexes.MatcherInfo[0], mockDbWithIndexes, mockDbWithIndexes.TableInfo[0])
 		c.SetReqAccessor(ast.NewMockAccessor(mockRequest))
@@ -111,9 +140,105 @@ func TestOptimizer_Optimizer2(t *testing.T) {
 		o := NewOptimizer(c)
 		output := o.Optimizer(lo.Generate(tree))
 		expected := `MatcherPlan | Type: AllowOverride
-└─ShortCircuitPlan | Type: OR
-  ├─(Const)SeqScanPlan | Predicate: ((r.subOwner == r.objOwner) && (r.subName == r.objName))
-  └─(Non-Const)SeqScanPlan | Predicate: ((((((((r.subOwner == p.subOwner) || (p.subOwner == "*")) && (((r.subName == p.subName) || (p.subName == "*")) || ((r.subName != "anonymous") && (p.subName == "!anonymous")))) && ((r.method == p.method) || (p.method == "*"))) && ((r.urlPath == p.urlPath) || (p.urlPath == "*"))) && ((r.objOwner == p.objOwner) || (p.objOwner == "*"))) && ((r.objName == p.objName) || (p.objName == "*"))) && (p.eft == "allow"))`
+└─LimitPlan | Limit:1
+  └─ShortCircuitPlan | Type: OR
+    ├─(Const)SeqScanPlan | Predicate: ((r.subOwner == r.objOwner) && (r.subName == r.objName))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((r.subOwner == p.subOwner) && (r.subName == p.subName)) && (r.method == p.method)) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((p.subOwner == "*") && (r.subName == p.subName)) && (r.method == p.method)) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((r.subOwner == p.subOwner) && (p.subName == "*")) && (r.method == p.method)) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((p.subOwner == "*") && (p.subName == "*")) && (r.method == p.method)) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: ((((((((r.subOwner == p.subOwner) && (r.subName != "anonymous")) && (p.subName == "!anonymous")) && (r.method == p.method)) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: ((((((((p.subOwner == "*") && (r.subName != "anonymous")) && (p.subName == "!anonymous")) && (r.method == p.method)) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((r.subOwner == p.subOwner) && (r.subName == p.subName)) && (p.method == "*")) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((p.subOwner == "*") && (r.subName == p.subName)) && (p.method == "*")) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((r.subOwner == p.subOwner) && (p.subName == "*")) && (p.method == "*")) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((p.subOwner == "*") && (p.subName == "*")) && (p.method == "*")) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: ((((((((r.subOwner == p.subOwner) && (r.subName != "anonymous")) && (p.subName == "!anonymous")) && (p.method == "*")) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: ((((((((p.subOwner == "*") && (r.subName != "anonymous")) && (p.subName == "!anonymous")) && (p.method == "*")) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((r.subOwner == p.subOwner) && (r.subName == p.subName)) && (r.method == p.method)) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((p.subOwner == "*") && (r.subName == p.subName)) && (r.method == p.method)) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((r.subOwner == p.subOwner) && (p.subName == "*")) && (r.method == p.method)) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((p.subOwner == "*") && (p.subName == "*")) && (r.method == p.method)) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: ((((((((r.subOwner == p.subOwner) && (r.subName != "anonymous")) && (p.subName == "!anonymous")) && (r.method == p.method)) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: ((((((((p.subOwner == "*") && (r.subName != "anonymous")) && (p.subName == "!anonymous")) && (r.method == p.method)) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((r.subOwner == p.subOwner) && (r.subName == p.subName)) && (p.method == "*")) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((p.subOwner == "*") && (r.subName == p.subName)) && (p.method == "*")) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((r.subOwner == p.subOwner) && (p.subName == "*")) && (p.method == "*")) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((p.subOwner == "*") && (p.subName == "*")) && (p.method == "*")) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: ((((((((r.subOwner == p.subOwner) && (r.subName != "anonymous")) && (p.subName == "!anonymous")) && (p.method == "*")) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: ((((((((p.subOwner == "*") && (r.subName != "anonymous")) && (p.subName == "!anonymous")) && (p.method == "*")) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((r.subOwner == p.subOwner) && (r.subName == p.subName)) && (r.method == p.method)) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((p.subOwner == "*") && (r.subName == p.subName)) && (r.method == p.method)) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((r.subOwner == p.subOwner) && (p.subName == "*")) && (r.method == p.method)) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((p.subOwner == "*") && (p.subName == "*")) && (r.method == p.method)) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: ((((((((r.subOwner == p.subOwner) && (r.subName != "anonymous")) && (p.subName == "!anonymous")) && (r.method == p.method)) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: ((((((((p.subOwner == "*") && (r.subName != "anonymous")) && (p.subName == "!anonymous")) && (r.method == p.method)) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((r.subOwner == p.subOwner) && (r.subName == p.subName)) && (p.method == "*")) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((p.subOwner == "*") && (r.subName == p.subName)) && (p.method == "*")) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((r.subOwner == p.subOwner) && (p.subName == "*")) && (p.method == "*")) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((p.subOwner == "*") && (p.subName == "*")) && (p.method == "*")) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: ((((((((r.subOwner == p.subOwner) && (r.subName != "anonymous")) && (p.subName == "!anonymous")) && (p.method == "*")) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: ((((((((p.subOwner == "*") && (r.subName != "anonymous")) && (p.subName == "!anonymous")) && (p.method == "*")) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((r.subOwner == p.subOwner) && (r.subName == p.subName)) && (r.method == p.method)) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((p.subOwner == "*") && (r.subName == p.subName)) && (r.method == p.method)) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((r.subOwner == p.subOwner) && (p.subName == "*")) && (r.method == p.method)) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((p.subOwner == "*") && (p.subName == "*")) && (r.method == p.method)) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: ((((((((r.subOwner == p.subOwner) && (r.subName != "anonymous")) && (p.subName == "!anonymous")) && (r.method == p.method)) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: ((((((((p.subOwner == "*") && (r.subName != "anonymous")) && (p.subName == "!anonymous")) && (r.method == p.method)) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((r.subOwner == p.subOwner) && (r.subName == p.subName)) && (p.method == "*")) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((p.subOwner == "*") && (r.subName == p.subName)) && (p.method == "*")) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((r.subOwner == p.subOwner) && (p.subName == "*")) && (p.method == "*")) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((p.subOwner == "*") && (p.subName == "*")) && (p.method == "*")) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: ((((((((r.subOwner == p.subOwner) && (r.subName != "anonymous")) && (p.subName == "!anonymous")) && (p.method == "*")) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: ((((((((p.subOwner == "*") && (r.subName != "anonymous")) && (p.subName == "!anonymous")) && (p.method == "*")) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((r.subOwner == p.subOwner) && (r.subName == p.subName)) && (r.method == p.method)) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((p.subOwner == "*") && (r.subName == p.subName)) && (r.method == p.method)) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((r.subOwner == p.subOwner) && (p.subName == "*")) && (r.method == p.method)) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((p.subOwner == "*") && (p.subName == "*")) && (r.method == p.method)) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: ((((((((r.subOwner == p.subOwner) && (r.subName != "anonymous")) && (p.subName == "!anonymous")) && (r.method == p.method)) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: ((((((((p.subOwner == "*") && (r.subName != "anonymous")) && (p.subName == "!anonymous")) && (r.method == p.method)) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((r.subOwner == p.subOwner) && (r.subName == p.subName)) && (p.method == "*")) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((p.subOwner == "*") && (r.subName == p.subName)) && (p.method == "*")) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((r.subOwner == p.subOwner) && (p.subName == "*")) && (p.method == "*")) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((p.subOwner == "*") && (p.subName == "*")) && (p.method == "*")) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: ((((((((r.subOwner == p.subOwner) && (r.subName != "anonymous")) && (p.subName == "!anonymous")) && (p.method == "*")) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: ((((((((p.subOwner == "*") && (r.subName != "anonymous")) && (p.subName == "!anonymous")) && (p.method == "*")) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((r.subOwner == p.subOwner) && (r.subName == p.subName)) && (r.method == p.method)) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((p.subOwner == "*") && (r.subName == p.subName)) && (r.method == p.method)) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((r.subOwner == p.subOwner) && (p.subName == "*")) && (r.method == p.method)) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((p.subOwner == "*") && (p.subName == "*")) && (r.method == p.method)) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: ((((((((r.subOwner == p.subOwner) && (r.subName != "anonymous")) && (p.subName == "!anonymous")) && (r.method == p.method)) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: ((((((((p.subOwner == "*") && (r.subName != "anonymous")) && (p.subName == "!anonymous")) && (r.method == p.method)) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((r.subOwner == p.subOwner) && (r.subName == p.subName)) && (p.method == "*")) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((p.subOwner == "*") && (r.subName == p.subName)) && (p.method == "*")) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((r.subOwner == p.subOwner) && (p.subName == "*")) && (p.method == "*")) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((p.subOwner == "*") && (p.subName == "*")) && (p.method == "*")) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: ((((((((r.subOwner == p.subOwner) && (r.subName != "anonymous")) && (p.subName == "!anonymous")) && (p.method == "*")) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: ((((((((p.subOwner == "*") && (r.subName != "anonymous")) && (p.subName == "!anonymous")) && (p.method == "*")) && (p.urlPath == "*")) && (r.objOwner == p.objOwner)) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((r.subOwner == p.subOwner) && (r.subName == p.subName)) && (r.method == p.method)) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((p.subOwner == "*") && (r.subName == p.subName)) && (r.method == p.method)) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((r.subOwner == p.subOwner) && (p.subName == "*")) && (r.method == p.method)) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((p.subOwner == "*") && (p.subName == "*")) && (r.method == p.method)) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: ((((((((r.subOwner == p.subOwner) && (r.subName != "anonymous")) && (p.subName == "!anonymous")) && (r.method == p.method)) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: ((((((((p.subOwner == "*") && (r.subName != "anonymous")) && (p.subName == "!anonymous")) && (r.method == p.method)) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((r.subOwner == p.subOwner) && (r.subName == p.subName)) && (p.method == "*")) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((p.subOwner == "*") && (r.subName == p.subName)) && (p.method == "*")) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((r.subOwner == p.subOwner) && (p.subName == "*")) && (p.method == "*")) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((p.subOwner == "*") && (p.subName == "*")) && (p.method == "*")) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: ((((((((r.subOwner == p.subOwner) && (r.subName != "anonymous")) && (p.subName == "!anonymous")) && (p.method == "*")) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: ((((((((p.subOwner == "*") && (r.subName != "anonymous")) && (p.subName == "!anonymous")) && (p.method == "*")) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((r.subOwner == p.subOwner) && (r.subName == p.subName)) && (r.method == p.method)) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((p.subOwner == "*") && (r.subName == p.subName)) && (r.method == p.method)) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((r.subOwner == p.subOwner) && (p.subName == "*")) && (r.method == p.method)) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((p.subOwner == "*") && (p.subName == "*")) && (r.method == p.method)) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: ((((((((r.subOwner == p.subOwner) && (r.subName != "anonymous")) && (p.subName == "!anonymous")) && (r.method == p.method)) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: ((((((((p.subOwner == "*") && (r.subName != "anonymous")) && (p.subName == "!anonymous")) && (r.method == p.method)) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((r.subOwner == p.subOwner) && (r.subName == p.subName)) && (p.method == "*")) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((p.subOwner == "*") && (r.subName == p.subName)) && (p.method == "*")) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((r.subOwner == p.subOwner) && (p.subName == "*")) && (p.method == "*")) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: (((((((p.subOwner == "*") && (p.subName == "*")) && (p.method == "*")) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))
+    ├─(Non-Const)SeqScanPlan | Predicate: ((((((((r.subOwner == p.subOwner) && (r.subName != "anonymous")) && (p.subName == "!anonymous")) && (p.method == "*")) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))
+    └─(Non-Const)SeqScanPlan | Predicate: ((((((((p.subOwner == "*") && (r.subName != "anonymous")) && (p.subName == "!anonymous")) && (p.method == "*")) && (p.urlPath == "*")) && (p.objOwner == "*")) && (p.objName == "*")) && (p.eft == "allow"))`
 		assert.Equal(t, expected, output.String())
 		fmt.Println(output.String())
 	})
@@ -125,7 +250,7 @@ func TestOptimizer_Optimizer2(t *testing.T) {
 		plan := op.Generate(tree)
 		o := NewOptimizer(c)
 		output := o.Optimizer(plan)
-		expected := `TableRowIdScan | Predicate: (r.sub == p.sub)
+		expected := `TableRowIdScan
 └─IndexScanPlan | Predicate: (r.sub == p.sub)`
 		assert.Equal(t, expected, output.String())
 		fmt.Println(output.String())

@@ -16,6 +16,7 @@ package engine
 
 import (
 	"context"
+	"github.com/casbin-mesh/neo/pkg/primitive"
 	"github.com/stretchr/testify/assert"
 	"os"
 )
@@ -27,46 +28,34 @@ func setModel(e Engine, ns, path string, t assert.TestingT) {
 	assert.Nil(t, err)
 }
 
-func insertOne(e Engine, ns, p string, data A, t assert.TestingT) A {
+func insertOne(e Engine, ns, p string, tid primitive.ObjectID, data A, t assert.TestingT) A {
 	// open namespace
 	nsHandle := e.Namespace(ns)
 	// the default policies table
 	pTab := nsHandle.Table(p)
-	inserted, err := pTab.InsertOne(context.Background(), data)
+	inserted, err := pTab.InsertOne(context.Background(), tid, data)
 	assert.Nil(t, err)
 
 	return inserted
 }
 
-func insertMany(e Engine, ns, p string, data []A, t assert.TestingT) []A {
+func tryInsertOne(e Engine, ns, p string, tid primitive.ObjectID, data A, t assert.TestingT) (A, error) {
 	// open namespace
 	nsHandle := e.Namespace(ns)
 	// the default policies table
 	pTab := nsHandle.Table(p)
-	inserted, err := pTab.InsertMany(context.Background(), data)
+	return pTab.InsertOne(context.Background(), tid, data)
+}
+
+func insertMany(e Engine, ns, p string, tids []primitive.ObjectID, data []A, t assert.TestingT) []A {
+	// open namespace
+	nsHandle := e.Namespace(ns)
+	// the default policies table
+	pTab := nsHandle.Table(p)
+	inserted, err := pTab.InsertMany(context.Background(), tids, data)
 	assert.Nil(t, err)
 
 	return inserted
-}
-
-func deleteOne(e Engine, ns, p string, data A, t assert.TestingT) A {
-	// open namespace
-	nsHandle := e.Namespace(ns)
-	// the default policies table
-	pTab := nsHandle.Table(p)
-	deleted, err := pTab.DeleteOne(context.Background(), data)
-	assert.Nil(t, err)
-	return deleted
-}
-
-func updateOne(e Engine, ns, p string, data, update A, t assert.TestingT) A {
-	// open namespace
-	nsHandle := e.Namespace(ns)
-	// the default policies table
-	pTab := nsHandle.Table(p)
-	updated, err := pTab.UpdateOne(context.Background(), data, update)
-	assert.Nil(t, err)
-	return updated
 }
 
 func find(e Engine, ns, p string, filter interface{}, t assert.TestingT) []M {

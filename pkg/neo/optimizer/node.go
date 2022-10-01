@@ -24,6 +24,7 @@ import (
 	"github.com/casbin-mesh/neo/pkg/neo/session"
 	"github.com/casbin-mesh/neo/pkg/neo/utils"
 	"golang.org/x/exp/slices"
+	"hash/fnv"
 )
 
 type MatcherPlanType int
@@ -78,9 +79,27 @@ func (p *LogicalIndexLookupReader) String() string {
 
 func (p *LogicalIndexLookupReader) FindBestPlan(ctx session.OptimizerCtx) plan.AbstractPlan {
 	indexScan := p.Build.FindBestPlan(ctx)
+
+	pred := indexScan.(plan.IndexScanPlan).Predicate()
+	members := pred.AccessorMembers()
+
+	_, remained := PrunePredicate(p.Predicate, func(evaluable ast.Evaluable) bool {
+		member := expression.GetAccessorMembers(evaluable)
+		if len(member) > 0 {
+			return slices.Contains(members, member[0])
+		}
+		return false
+	})
+
 	evalCtx := ast.NewContext()
-	expr, accessor := expression.NewExpression(Predicate2Evaluable(p.Predicate))
-	evalCtx.AddAccessor(ctx.PolicyTableName(), accessor)
+	var (
+		expr     expression.Expression
+		accessor ast.AccessorValue
+	)
+	if remained != nil {
+		expr, accessor = expression.NewExpression(Predicate2Evaluable(*remained))
+		evalCtx.AddAccessor(ctx.PolicyTableName(), accessor)
+	}
 	evalCtx.AddAccessor(ctx.ReqAccessorAncestorName(), ctx.ReqAccessor())
 	return plan.NewTableRowIdScan(ctx.Table(), expr, evalCtx, ctx.DB().ID, ctx.Table().ID, indexScan)
 }
@@ -98,7 +117,7 @@ type LogicalIndexReader struct {
 	plan.AbstractPlan
 	Table         *model.TableInfo
 	Indexes       []*model.IndexInfo
-	Predicate     Predicate
+	Predicate     *Predicate
 	DbId          uint64
 	TableId       uint64
 	CoveredMember []string
@@ -109,27 +128,47 @@ func (p *LogicalIndexReader) String() string {
 }
 
 func (p *LogicalIndexReader) FindBestPlan(ctx session.OptimizerCtx) plan.AbstractPlan {
-	members := GetPredicateAccessorMembers(p.Predicate, nil)
+	members := GetPredicateAccessorMembers(*p.Predicate, nil)
 
 	maxCoveredIndex := -1
 	var coveredMembers []string
-	for i, index := range p.Indexes {
-		if slices.Contains(members, index.Columns[0].ColName.L) {
-			tmpCovered := []string{index.Columns[0].ColName.L}
-			for i := 1; i < len(index.Columns); i++ {
-				col := index.Columns[i]
-				if slices.Contains(members, col.ColName.L) {
-					tmpCovered = append(tmpCovered, col.ColName.L)
+	for i := len(p.Indexes) - 1; i >= 0; i-- {
+		index := p.Indexes[i]
+		switch index.Tp {
+		case model.SingleColumnIndex:
+			if slices.Contains(members, index.Columns[0].ColName.L) {
+				tmpCovered := []string{index.Columns[0].ColName.L}
+				for i := 1; i < len(index.Columns); i++ {
+					col := index.Columns[i]
+					if slices.Contains(members, col.ColName.L) {
+						tmpCovered = append(tmpCovered, col.ColName.L)
+					}
+				}
+				if maxCoveredIndex == -1 || len(tmpCovered) > len(coveredMembers) {
+					maxCoveredIndex = i
+					coveredMembers = tmpCovered
 				}
 			}
-			if maxCoveredIndex == -1 || len(tmpCovered) > len(coveredMembers) {
-				maxCoveredIndex = i
-				coveredMembers = tmpCovered
+		case model.HashIndex:
+			// the hash index must cover all members
+			if len(members) != len(index.Columns) {
+				break
 			}
+			for _, column := range index.Columns {
+				for _, member := range members {
+					if column.ColName.L != member {
+						break
+					}
+				}
+			}
+			maxCoveredIndex = i
+			coveredMembers = members
+			break
 		}
+
 	}
 
-	pruned := *PrunePredicate(p.Predicate, func(evaluable ast.Evaluable) bool {
+	pruned, _ := PrunePredicate(*p.Predicate, func(evaluable ast.Evaluable) bool {
 		member := expression.GetAccessorMembers(evaluable)
 		if len(member) > 0 {
 			return slices.Contains(coveredMembers, member[0])
@@ -137,14 +176,53 @@ func (p *LogicalIndexReader) FindBestPlan(ctx session.OptimizerCtx) plan.Abstrac
 		return false
 	})
 
-	// coveredMembers[0]
-	idx := slices.IndexFunc(p.Indexes, func(i *model.IndexInfo) bool { return i.Columns[0].ColName.L == coveredMembers[0] })
-	index := p.Indexes[idx]
-	// build prefix
-	prefix := codec.PrimaryIndexEntryKey(index.ID, codec.EncodePrimitive(ctx.ReqAccessor().GetMember(coveredMembers[0])))
+	index := p.Indexes[maxCoveredIndex]
+	var prefix []byte
+	switch index.Tp {
+	case model.SingleColumnIndex:
+		// build prefix
+		prefix = codec.PrimaryIndexEntryKey(index.ID, codec.EncodePrimitive(ctx.ReqAccessor().GetMember(coveredMembers[0])))
+	case model.HashIndex:
+
+		var pEftValue string
+		_, _ = PrunePredicate(*p.Predicate, func(evaluable ast.Evaluable) bool {
+			switch node := evaluable.(type) {
+			case *ast.BinaryOperationExpr:
+				l, lOk := node.L.(*ast.Accessor)
+				r, rOk := node.R.(*ast.Accessor)
+				if lOk || rOk {
+					if lOk {
+						ident, ok := l.Ident.(*ast.Primitive)
+						if ok && ident.Typ == ast.IDENTIFIER && ident.Value.(string) == "eft" {
+							pEftValue = node.R.(*ast.Primitive).Value.(string)
+							return false
+						}
+					} else {
+						ident, ok := r.Ident.(*ast.Primitive)
+						if ok && ident.Typ == ast.IDENTIFIER && ident.Value.(string) == "eft" {
+							pEftValue = node.L.(*ast.Primitive).Value.(string)
+							return false
+						}
+					}
+				}
+				return false
+			default:
+				return false
+			}
+		})
+		h := fnv.New128()
+		for _, column := range index.Columns {
+			if column.ColName.L == "eft" {
+				h.Write([]byte(pEftValue))
+			} else {
+				h.Write(codec.EncodePrimitive(ctx.ReqAccessor().GetMember(column.ColName.L)))
+			}
+		}
+		prefix = codec.PrimaryIndexEntryKey(index.ID, h.Sum(nil))
+	}
 
 	evalCtx := ast.NewContext()
-	expr, accessor := expression.NewExpression(Predicate2Evaluable(pruned))
+	expr, accessor := expression.NewExpression(Predicate2Evaluable(*pruned))
 	evalCtx.AddAccessor(ctx.PolicyTableName(), accessor)
 	evalCtx.AddAccessor(ctx.ReqAccessorAncestorName(), ctx.ReqAccessor())
 
@@ -177,7 +255,7 @@ func (p *LogicalMatcherPlan) String() string {
 func (p *LogicalMatcherPlan) FindBestPlan(ctx session.OptimizerCtx) plan.AbstractPlan {
 	children := make([]plan.AbstractPlan, 0, len(p.Children))
 	for _, child := range p.Children {
-		children = append(children, child.FindBestPlan(ctx))
+		children = append(children, plan.NewLimitPlan([]plan.AbstractPlan{child.FindBestPlan(ctx)}, 1))
 	}
 	return plan.NewMatcherPlan(children, plan.EffectType(p.Type))
 }
