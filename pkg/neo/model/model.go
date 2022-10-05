@@ -14,6 +14,8 @@
 
 package model
 
+import "strings"
+
 type Cloneable interface {
 	Clone() Cloneable
 }
@@ -22,4 +24,11 @@ type Cloneable interface {
 type CIStr struct {
 	O string
 	L string
+}
+
+func NewCIStr(origin string) CIStr {
+	return CIStr{
+		O: origin,
+		L: strings.ToLower(origin),
+	}
 }

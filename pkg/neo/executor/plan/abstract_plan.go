@@ -1,6 +1,9 @@
 package plan
 
-import "github.com/casbin-mesh/neo/pkg/primitive/bschema"
+import (
+	"github.com/casbin-mesh/neo/pkg/neo/session"
+	"github.com/casbin-mesh/neo/pkg/primitive/bschema"
+)
 
 type PlanType int
 
@@ -21,11 +24,21 @@ type AbstractPlan interface {
 	GetChildAt(idx int) AbstractPlan
 	GetChildren() []AbstractPlan
 	GetType() PlanType
+	String() string
+	FindBestPlan(ctx session.OptimizerCtx) AbstractPlan
 }
 
 type abstractPlan struct {
 	schema   bschema.Reader
 	children []AbstractPlan
+}
+
+func (a abstractPlan) FindBestPlan(ctx session.OptimizerCtx) AbstractPlan {
+	panic("unimplemented")
+}
+
+func (a abstractPlan) String() string {
+	return "unimplemented"
 }
 
 func (a abstractPlan) OutputSchema() bschema.Reader {

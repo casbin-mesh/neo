@@ -20,7 +20,9 @@ func (c *ColumnInfo) Clone() *ColumnInfo {
 	if nc.DefaultValue != nil {
 		nc.DefaultValue = c.DefaultValue.Clone()
 	}
-	nc.DefaultValueBit = append([]byte{}, nc.DefaultValueBit...)
+	if nc.DefaultValueBit != nil {
+		nc.DefaultValueBit = append([]byte{}, nc.DefaultValueBit...)
+	}
 	return &nc
 }
 

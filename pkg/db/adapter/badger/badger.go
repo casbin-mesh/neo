@@ -49,6 +49,10 @@ func (t txn) Commit() error {
 	return t.txn.Commit()
 }
 
+func (t txn) ReadTs() uint64 {
+	return t.readTs
+}
+
 func (t txn) CommitWith(cb func(err error)) {
 	t.txn.CommitWith(cb)
 }
@@ -92,7 +96,14 @@ func (t txn) NewIterator(iterOpt adapter2.IteratorOptions) db.Iterator {
 }
 
 func (t txn) Get(k []byte) (db.Item, error) {
-	return t.txn.Get(k)
+	if item, err := t.txn.Get(k); err != nil {
+		if err == badger.ErrKeyNotFound {
+			return item, db.ErrKeyNotFound
+		}
+		return item, err
+	} else {
+		return item, nil
+	}
 }
 
 func (b adapter) NewTransactionAt(readTs uint64, update bool) db.Txn {
@@ -115,6 +126,10 @@ func OpenManaged(opt badger.Options) (db.DB, error) {
 		return nil, err
 	}
 	return &adapter{db: db}, nil
+}
+
+func (b adapter) MaxVersion() uint64 {
+	return b.db.MaxVersion()
 }
 
 func Open(opt badger.Options) (db.DB, error) {

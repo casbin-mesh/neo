@@ -245,7 +245,7 @@ func (db *mockDB) NewTxnAt(readTs uint64, update bool) session.Context {
 	txn := db.db.NewTransactionAt(readTs, update)
 	metaTxn := db.metaIndex.NewTransactionAt(readTs, update)
 	infoTxn := db.infoIndex.NewTransactionAt(readTs, update)
-	return session.NewSessionCtx(txn, meta.NewInMemMeta(metaTxn), schema.New(infoTxn), &db.txnMark)
+	return session.NewSessionManually(txn, meta.NewInMemMeta(metaTxn), schema.New(infoTxn), &db.txnMark)
 }
 
 func (db *mockDB) Close() error {
@@ -283,7 +283,7 @@ func (db *mockDB) CreateDB(t *testing.T, sc session.Context, info *model.DBInfo)
 
 func (db *mockDB) InsertTuples(t *testing.T, sc session.Context, dbOid, tableOid uint64, tuples []value.Values) (result []btuple.Modifier, ids []primitive.ObjectID, err error) {
 	builder := executorBuilder{ctx: sc}
-	executor := builder.Build(plan.NewRawInsertPlan(tuples, dbOid, tableOid))
+	executor := builder.Build(plan.NewRawInsertPlan(nil, tuples, dbOid, tableOid))
 	assert.Nil(t, builder.Error())
 	result, ids, err = Execute(executor, context.TODO())
 	return

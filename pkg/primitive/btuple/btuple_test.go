@@ -38,8 +38,30 @@ func TestBufferedReader_Test(t *testing.T) {
 			assert.True(t, reader.Occupied(i))
 		}
 	})
+	t.Run("SmallValueType2", func(t *testing.T) {
+		e := []Elem{Elem(""), Elem(""), Elem("")}
+		buf := newValueBTuple(t, SmallValueType, e...)
+		reader, err := NewReader(buf)
+		assert.NotNil(t, reader)
+		assert.Nil(t, err)
+		for i := 0; i < len(e); i++ {
+			assert.Equal(t, e[i], reader.ValueAt(i))
+			assert.True(t, reader.Occupied(i))
+		}
+	})
 	t.Run("LargeValueType", func(t *testing.T) {
 		e := []Elem{Elem("Alice"), Elem("data1"), Elem("read")}
+		buf := newValueBTuple(t, LargeValueType, e...)
+		reader, err := NewReader(buf)
+		assert.NotNil(t, reader)
+		assert.Nil(t, err)
+		for i := 0; i < len(e); i++ {
+			assert.Equal(t, e[i], reader.ValueAt(i))
+			assert.True(t, reader.Occupied(i))
+		}
+	})
+	t.Run("LargeValueType2", func(t *testing.T) {
+		e := []Elem{Elem(""), Elem(""), Elem("")}
 		buf := newValueBTuple(t, LargeValueType, e...)
 		reader, err := NewReader(buf)
 		assert.NotNil(t, reader)

@@ -56,6 +56,31 @@ func NewStringValue(s string) Value {
 	}
 }
 
+func NewIntValue(i int64) Value {
+	return Value{
+		t: bsontype.Int32,
+		i: i,
+	}
+}
+
+func NewValueFromInterface(i interface{}) Value {
+	switch v := i.(type) {
+	case string:
+		return NewStringValue(v)
+	case *string:
+		return NewStringValue(*v)
+	case int:
+		return NewIntValue(int64(v))
+	case *int:
+		return NewIntValue(int64(*v))
+	case int64:
+		return NewIntValue(v)
+	case *int64:
+		return NewIntValue(*v)
+	}
+	panic("unsupported type")
+}
+
 func (v *Value) GetString() string {
 	return string(trick.String(v.b))
 }

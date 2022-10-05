@@ -62,7 +62,7 @@ func TestNewMultiIndexScanExecutor(t *testing.T) {
 
 	objIndexScanPlan := plan.NewIndexScanPlan(model.NewIndexSchemaReader(mockDBInfo1.TableInfo[0], 1), objIndexPrefix, mockExpr2, ctx2, 1, 1)
 
-	// multi scan plan
+	// multi scan node
 	multiIndexScanPlan := plan.NewMultiIndexScan([]plan.AbstractPlan{sujIndexScanPlan, objIndexScanPlan}, 1, 1)
 	exec, err := builder.Build(multiIndexScanPlan), builder.Error()
 	assert.Nil(t, err)

@@ -1,12 +1,15 @@
 package schema
 
 import (
+	"github.com/casbin-mesh/neo/pkg/neo/codec"
 	"github.com/casbin-mesh/neo/pkg/neo/index"
 	"github.com/casbin-mesh/neo/pkg/neo/model"
 )
 
 type Reader interface {
 	Get(key []byte) (*model.DBInfo, error)
+	GetDB(dbId uint64) (*model.DBInfo, error)
+	GetTable(tableID uint64) (*model.TableInfo, error)
 }
 
 type ReaderWriter interface {
@@ -19,6 +22,15 @@ type ReaderWriter interface {
 
 type inMemSchema struct {
 	index.Txn[*model.DBInfo]
+}
+
+func (i inMemSchema) GetTable(tableID uint64) (*model.TableInfo, error) {
+	//return i.Txn.Get(codec.TableInfoKey(tableID))
+	return nil, nil
+}
+
+func (i inMemSchema) GetDB(dbId uint64) (*model.DBInfo, error) {
+	return i.Txn.Get(codec.DBInfoKey(dbId))
 }
 
 func (i inMemSchema) Get(key []byte) (*model.DBInfo, error) {

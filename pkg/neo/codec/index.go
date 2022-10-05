@@ -20,6 +20,7 @@ import (
 	"github.com/casbin-mesh/neo/pkg/primitive"
 	"github.com/casbin-mesh/neo/pkg/primitive/btuple"
 	flatbuffers "github.com/google/flatbuffers/go"
+	"hash/fnv"
 )
 
 // IndexInfoKey s_i{id}
@@ -54,29 +55,48 @@ func SecondaryIndexEntryKey(indexId uint64, columnValue []byte, rId []byte) []by
 }
 
 func IndexEntryKey(indexInfo *model.IndexInfo, columns []*model.ColumnInfo, tuple btuple.Reader, rid primitive.ObjectID) []byte {
-	var (
-		leftmost []byte
-	)
-	index := indexInfo.Leftmost()
-	col := columns[index.Offset]
-	// retrieve actual value, then encode to mem-comparable format
-	leftmost = EncodeCmpValue(DecodeValue(tuple.ValueAt(index.Offset), col.Tp))
-	key := SecondaryIndexEntryKey(indexInfo.ID, leftmost, rid.Bytes())
 
-	return key
+	switch indexInfo.Tp {
+	case model.SingleColumnIndex:
+		var (
+			leftmost []byte
+		)
+		index := indexInfo.Leftmost()
+		col := columns[index.Offset]
+		// retrieve actual value, then encode to mem-comparable format
+		leftmost = EncodeCmpValue(DecodeValue(tuple.ValueAt(index.Offset), col.Tp))
+		key := SecondaryIndexEntryKey(indexInfo.ID, leftmost, rid.Bytes())
+
+		return key
+	case model.HashIndex:
+
+		h := fnv.New128()
+		for _, index := range indexInfo.Columns {
+			h.Write(tuple.ValueAt(index.Offset))
+		}
+
+		return SecondaryIndexEntryKey(indexInfo.ID, h.Sum(nil), rid.Bytes())
+	}
+	panic("unreachable")
+
 }
 
 func IndexEntry(indexInfo *model.IndexInfo, columns []*model.ColumnInfo, tuple btuple.Reader, rid primitive.ObjectID) (key, value []byte) {
+	switch indexInfo.Tp {
+	case model.SingleColumnIndex:
+		tupleBuilder := btuple.NewTupleBuilder(btuple.SmallValueType)
 
-	tupleBuilder := btuple.NewTupleBuilder(btuple.SmallValueType)
+		for _, index := range indexInfo.Columns {
+			tupleBuilder.Append(tuple.ValueAt(index.Offset))
+		}
 
-	for _, index := range indexInfo.Columns {
-		tupleBuilder.Append(tuple.ValueAt(index.Offset))
+		key = IndexEntryKey(indexInfo, columns, tuple, rid)
+		return key, tupleBuilder.Encode()
+	case model.HashIndex:
+		key = IndexEntryKey(indexInfo, columns, tuple, rid)
+		return key, nil
 	}
-
-	key = IndexEntryKey(indexInfo, columns, tuple, rid)
-
-	return key, tupleBuilder.Encode()
+	panic("unreachable")
 }
 
 func IndexEntries(index *model.IndexInfo, tuple btuple.Reader, rid primitive.ObjectID, iter func(key, value []byte) error) (err error) {

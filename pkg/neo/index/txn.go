@@ -25,6 +25,7 @@ type Txn[T any] interface {
 	Set(key []byte, value T) error
 	CommitAt(commitTs uint64, callback func(error)) error
 	ReadTS() uint64
+	Discard()
 }
 
 type txn[T any] struct {
@@ -36,7 +37,7 @@ type txn[T any] struct {
 	discarded     bool
 }
 
-func (m *txn[T]) Discord() {
+func (m *txn[T]) Discard() {
 	defer func() {
 		if !m.discarded {
 			m.discarded = true

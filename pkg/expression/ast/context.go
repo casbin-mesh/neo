@@ -14,6 +14,21 @@
 
 package ast
 
+type mockAccessor struct {
+	m map[string]string
+}
+
+func (m mockAccessor) GetMember(ident string) *Primitive {
+	if v, ok := m.m[ident]; ok {
+		return &Primitive{Typ: STRING, Value: v}
+	}
+	return &Primitive{Typ: NULL}
+}
+
+func NewMockAccessor(m map[string]string) AccessorValue {
+	return &mockAccessor{m}
+}
+
 type AccessorValue interface {
 	GetMember(ident string) *Primitive
 }

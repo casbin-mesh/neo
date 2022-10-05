@@ -39,25 +39,27 @@ func (i *indexScanExecutor) Next(ctx context.Context, tuple *btuple.Modifier, ri
 	if err != nil {
 		return
 	}
-
-	tupleReader, err := btuple.NewReader(rawVal)
-	if err != nil {
-		return
-	}
-
-	*tuple = btuple.NewModifier(tupleReader.Values())
-
 	i.iter.Next()
-	predicate := i.indexScanPlan.Predicate()
-	if predicate != nil {
-		if res, err := predicate.Evaluate(i.GetSessionCtx(), i.indexScanPlan.GetEvalCtx(), *tuple, i.indexScanPlan.OutputSchema()); err == nil {
-			if value, err := expression.TryGetBool(res); err != nil {
-				return false, err
-			} else if !value {
-				return i.Next(ctx, tuple, rid)
-			}
-		} else {
+
+	if rawVal != nil {
+		tupleReader, err := btuple.NewReader(rawVal)
+		if err != nil {
 			return false, err
+		}
+
+		*tuple = btuple.NewModifier(tupleReader.Values())
+
+		predicate := i.indexScanPlan.Predicate()
+		if predicate != nil {
+			if res, err := predicate.Evaluate(i.GetSessionCtx(), i.indexScanPlan.GetEvalCtx(), *tuple, i.indexScanPlan.OutputSchema()); err == nil {
+				if value, err := expression.TryGetBool(res); err != nil {
+					return false, err
+				} else if !value {
+					return i.Next(ctx, tuple, rid)
+				}
+			} else {
+				return false, err
+			}
 		}
 	}
 
